@@ -131,11 +131,15 @@ function App() {
     if (!socket || !roomId) return;
 
     if (window.confirm("방에 참여하시겠습니까?")) {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-        video: false
-      });
-      setAudio(mediaStream);
+      try {
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false
+        });
+        setAudio(mediaStream);
+      } catch (error) {
+        console.error("DEBUG joinRoom() : ", error);
+      }
 
       socket.emit(
         "join-room",
