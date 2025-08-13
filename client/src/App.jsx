@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, {useEffect, useRef, useState} from "react";
 import io from "socket.io-client";
 import * as mediasoupClient from "mediasoup-client";
+import AudioAnalyzer from "./AudioAnalyzer";
 
 // const SERVER_URL = "http://localhost:5000";
 const SERVER_URL = "https://podcast.opencms.live";
@@ -20,6 +21,8 @@ function App() {
   const localVideoRef = useRef(null);
   const deviceRef = useRef(null);
   const recvTransportRef = useRef(null);
+  const [audio, setAudio] = useState(null);
+
   useEffect(() => {
     const newSocket = io(SERVER_URL);
     setSocket(newSocket);
@@ -113,17 +116,27 @@ function App() {
   };
 
   const getLocalAudioStreamAndTrack = async () => {
-    const audioStream = await navigator.mediaDevices.getUserMedia({
-      audio: true,
-    });
-    const audioTrack = audioStream.getAudioTracks()[0];
-    return audioTrack;
+    try {
+      const audioStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false,
+      });
+      return audioStream.getAudioTracks()[0];
+    } catch (e) {
+      console.error("DEBUG getLocalAudioStreamAndTrack() : ", e);
+    }
   };
 
-  const joinRoom = () => {
+  const joinRoom = async () => {
     if (!socket || !roomId) return;
 
     if (window.confirm("방에 참여하시겠습니까?")) {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+        video: false
+      });
+      setAudio(mediaStream);
+
       socket.emit(
         "join-room",
         { roomId, peerId: socket.id },
@@ -151,7 +164,7 @@ function App() {
           );
 
           // 수신용 Transport 생성
-          const newRecvTransport = createRecvTransport(
+          createRecvTransport(
             newDevice,
             recvTransportOptions
           );
@@ -160,11 +173,13 @@ function App() {
 
           // 오디오 스트림 캡처 및 Producer 생성
           const audioTrack = await getLocalAudioStreamAndTrack();
-          const newAudioProducer = await newSendTransport.produce({
-            track: audioTrack,
-          });
+          if (audioTrack) {
+            const newAudioProducer = await newSendTransport.produce({
+              track: audioTrack,
+            });
 
-          setAudioProducer(newAudioProducer);
+            setAudioProducer(newAudioProducer);
+          }
 
           // 기존 참여자 목록 업데이트
           setPeers(peerIds.filter((id) => id !== socket.id));
@@ -359,23 +374,11 @@ function App() {
       ) : (
         <div>
           <button onClick={leaveRoom}>Leave Room</button>
-          <button onClick={localStream ? stopCamera : startCamera}>
-            {localStream ? "Stop Camera" : "Start Camera"}
-          </button>
-          <button onClick={screenProducer ? stopScreenShare : startScreenShare}>
-            {screenProducer ? "Stop Screen Share" : "Start Screen Share"}
-          </button>
         </div>
       )}
       <div>
-        <h2>Local Video</h2>
-        <video
-          ref={localVideoRef}
-          autoPlay
-          playsInline
-          muted
-          width="400"
-        ></video>
+        <h2>Local</h2>
+        {audio ? <AudioAnalyzer audio={audio} /> : '' }
       </div>
       <div>
         <h2>Peers in Room</h2>
