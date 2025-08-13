@@ -38,7 +38,7 @@
     "cookie-parser": "^1.4.6",
     "dotenv": "^16.3.1",
     "express-basic-auth": "^1.2.1",
-    "mediasoup": "^3.13.16",
+    "mediasoup": "3.13.16",
     "mongoose": "^7.5.1",
     "nest-winston": "^1.9.4",
     "passport": "^0.6.0",
