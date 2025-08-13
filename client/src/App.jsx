@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from "react";
 import io from "socket.io-client";
 import * as mediasoupClient from "mediasoup-client";
 
-const SERVER_URL = "http://localhost:5000";
+// const SERVER_URL = "http://localhost:5000";
+const SERVER_URL = "https://podcast.opencms.live";
 
 function App() {
   const [socket, setSocket] = useState(null);

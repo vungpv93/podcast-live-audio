@@ -16,7 +16,7 @@ import { ProducerConsumerService } from 'src/mediasoup/producer-consumer/produce
 
 @WebSocketGateway({
   cors: {
-    origin: 'http://localhost:3000',
+    origin: true, // 'http://localhost:3000'
     credentials: true,
   },
 })
