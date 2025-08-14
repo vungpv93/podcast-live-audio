@@ -37,57 +37,75 @@ const Index: React.FC<Props> = ({ audioStream }: Props) => {
       return;
     }
 
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const analyser: AnalyserNode = audioCtx.createAnalyser();
-    const source: MediaStreamAudioSourceNode =
-      audioCtx.createMediaStreamSource(audioStream);
-    source.connect(analyser);
-
-    analyser.fftSize = 2048;
-    const bufferLength = analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Tạo analyser cho mỗi track
+    const analysers: AnalyserNode[] = [];
+    const sources: MediaStreamAudioSourceNode[] = [];
+    audioStream.getTracks().forEach((track) => {
+      const trackStream = new MediaStream([track]);
+      const source = audioCtx.createMediaStreamSource(trackStream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+      analysers.push(analyser);
+      sources.push(source);
+    });
+
+    const bufferLength = analysers[0]?.frequencyBinCount || 1024;
+    const dataArrays: Uint8Array[] = analysers.map(
+      () => new Uint8Array(bufferLength),
+    );
+
     const draw = () => {
       requestAnimationFrame(draw);
-      analyser.getByteTimeDomainData(dataArray);
-
       ctx.fillStyle = '#1f2937'; // bg-gray-800
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = '#3b82f6'; // blue-500
-      ctx.beginPath();
+      let silentFlg: boolean = true;
+      analysers.forEach((analyser, idx) => {
+        let x = 0;
+        const dataArray = dataArrays[idx];
+        analyser.getByteTimeDomainData(dataArrays[idx]);
+        const avg: number =
+          dataArray.reduce((sum, v): number => sum + Math.abs(v - 128), 0) /
+          dataArray.length;
+        if (avg >= 2) {
+          silentFlg = false;
+          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#3b82f6';
+          ctx.beginPath();
 
-      const sliceWidth = canvas.width / bufferLength;
-      let x = 0;
+          const sliceWidth = canvas.width / bufferLength;
+          for (let i = 0; i < bufferLength; i++) {
+            const v = dataArray[i] / 128.0;
+            const y = (v * canvas.height) / 2;
 
-      for (let i = 0; i < bufferLength; i++) {
-        const v = dataArray[i] / 128.0;
-        const y = (v * canvas.height) / 2;
-
-        if (i === 0) {
-          ctx.moveTo(x, y);
-        } else {
-          ctx.lineTo(x, y);
+            if (i === 0) {
+              ctx.moveTo(x, y);
+            } else {
+              ctx.lineTo(x, y);
+            }
+            x += sliceWidth;
+          }
+          ctx.lineTo(canvas.width, canvas.height / 2);
+          ctx.stroke();
         }
-        x += sliceWidth;
-      }
+      });
 
-      ctx.lineTo(canvas.width, canvas.height / 2);
-      ctx.stroke();
+      if (silentFlg) drawSilentLine();
     };
 
     draw();
 
     return () => {
-      source.disconnect();
-      analyser.disconnect();
+      sources.forEach((s) => s.disconnect());
+      analysers.forEach((a) => a.disconnect());
       audioCtx.close();
     };
   }, [audioStream]);
@@ -96,8 +114,8 @@ const Index: React.FC<Props> = ({ audioStream }: Props) => {
     <canvas
       ref={canvasRef}
       width={512}
-      height={128}
-      className="rounded mb-4 bg-gray-700"
+      height={256}
+      className="rounded bg-gray-700 w-full"
     />
   );
 };
