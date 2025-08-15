@@ -4,8 +4,8 @@
  */
 export const localAudioStreamAndTrack = async (): Promise<MediaStreamTrack | undefined> => {
 	try {
-		const audioStream: MediaStream = await navigator.mediaDevices.getUserMedia({audio: true, video: false});
-		return audioStream.getAudioTracks()[0];
+		const localStream: MediaStream = await navigator.mediaDevices.getUserMedia({audio: true, video: false});
+		return localStream.getAudioTracks()[0];
 	} catch (e) {
 		console.error("DEBUG getLocalAudioStreamAndTrack() : ", e);
 	}

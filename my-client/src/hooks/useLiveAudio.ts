@@ -3,7 +3,6 @@ import * as mediasoupClient from 'mediasoup-client';
 import type { Device, types } from 'mediasoup-client';
 import type { ConsumerKind, ILiveAudio } from '../dto/live-audio.ts';
 import { SocketEvent } from '../conf/socket.ts';
-import { localAudioStreamAndTrack } from '../utils';
 
 interface TransportOptions {
   id: string;
@@ -18,7 +17,7 @@ interface ProducerInfo {
   kind: ConsumerKind;
 }
 
-export function useLiveAudio({ roomId, socket }: ILiveAudio) {
+export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
   const consumersRef: RefObject<types.Consumer[]> = useRef<types.Consumer[]>(
     []
   );
@@ -26,7 +25,7 @@ export function useLiveAudio({ roomId, socket }: ILiveAudio) {
     new MediaStream()
   );
   const [audioStream, setAudioStream] = useState<MediaStream>();
-  const [localStream, setLocalStream] = useState<MediaStream>();
+  // const [localStream, setLocalStream] = useState<MediaStream>();
   
   const deviceRef: RefObject<Device | null> = useRef<Device | null>(null);
   const recvTransportRef: RefObject<types.Transport | null> =
@@ -209,24 +208,8 @@ export function useLiveAudio({ roomId, socket }: ILiveAudio) {
     [audioStream, roomId, socket]
   );
   
-  const handleTestMic: () => Promise<void> = useCallback(async () => {
-    try {
-      const mediaStream: MediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-      setLocalStream(mediaStream);
-    } catch (e) {
-      console.warn('Get micro ...');
-    }
-  }, []);
-  
   const joinRoom: () => Promise<void> = useCallback(async (): Promise<void> => {
     if (!socket || !roomId) return;
-    
-    try {
-      const mediaStream: MediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-      setLocalStream(mediaStream);
-    } catch (e) {
-      console.warn('Get micro ...');
-    }
     
     socket.emit(
       SocketEvent.JoinRoom,
@@ -250,7 +233,8 @@ export function useLiveAudio({ roomId, socket }: ILiveAudio) {
         // Gui Audio
         if (sendTransportOptions) {
           const newSendTransport = createSendTransport(newDevice, sendTransportOptions);
-          const audioTrack: MediaStreamTrack | undefined = await localAudioStreamAndTrack();
+          // const audioTrack: MediaStreamTrack | undefined = await localAudioStreamAndTrack();
+          const audioTrack: MediaStreamTrack | undefined = localStream?.getAudioTracks()[0];
           if (audioTrack && newSendTransport) {
             await newSendTransport.produce({
               track: audioTrack
@@ -265,7 +249,7 @@ export function useLiveAudio({ roomId, socket }: ILiveAudio) {
         }
       }
     );
-  }, [socket, roomId, createDevice, createRecvTransport, consume]);
+  }, [socket, roomId, localStream, createDevice, createRecvTransport, consume]);
   
   const leaveRoom: () => void = useCallback(() => {
     if (!socket) return;
@@ -337,8 +321,6 @@ export function useLiveAudio({ roomId, socket }: ILiveAudio) {
   
   return {
     audioStream,
-    localStream,
-    handleTestMic,
     joinRoom,
     leaveRoom,
     handlePause,

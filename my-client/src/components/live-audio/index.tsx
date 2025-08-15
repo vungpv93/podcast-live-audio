@@ -3,11 +3,14 @@ import type { ILiveAudio } from '../../dto/live-audio';
 import AudioAnalyzer from '../AudioAnalyzer';
 import { useLiveAudio } from '../../hooks/useLiveAudio';
 import { MicrophoneIcon } from '@heroicons/react/24/solid';
+import { useMic } from '../../hooks/useMic.ts';
 
 const Index: React.FC<ILiveAudio> = ({ roomId, socket }) => {
-  const { audioStream, localStream, handleTestMic, joinRoom, leaveRoom, handlePause, handleResume } = useLiveAudio({
+  const { isMicOn, handleMic, localStream } = useMic();
+  const { audioStream, joinRoom, leaveRoom, handlePause, handleResume } = useLiveAudio({
     roomId,
-    socket
+    socket,
+    localStream,
   });
   
   return (
@@ -16,8 +19,10 @@ const Index: React.FC<ILiveAudio> = ({ roomId, socket }) => {
       <div className='relative w-full flex justify-center'>
         <AudioAnalyzer audioStream={localStream || audioStream || undefined} />
         <div className='absolute inset-0 flex items-center justify-center'>
-          <button className='h-24 w-24 rounded-full flex items-center justify-center bg-blue-600'
-                  onClick={handleTestMic}>
+          <button
+            className={`h-24 w-24 rounded-full flex items-center justify-center border-0 focus:outline-none focus:ring-0 hover:bg-none hover:shadow-none hover:outline-none ${isMicOn ? 'bg-blue-600' : 'bg-gray-600'}`}
+            onClick={handleMic}
+          >
             <MicrophoneIcon className='h-16 w-16 text-white opacity-70' />
           </button>
         </div>
