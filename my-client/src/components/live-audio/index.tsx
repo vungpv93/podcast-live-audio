@@ -20,10 +20,10 @@ const Index: React.FC<ILiveAudio> = ({ roomId, socket }) => {
         <AudioAnalyzer audioStream={localStream || audioStream || undefined} />
         <div className='absolute inset-0 flex items-center justify-center'>
           <button
-            className={`h-24 w-24 rounded-full flex items-center justify-center border-0 focus:outline-none focus:ring-0 hover:bg-none hover:shadow-none hover:outline-none ${isMicOn ? 'bg-blue-600' : 'bg-gray-600'}`}
+            className={`h-24 w-24 rounded-full flex items-center justify-center border-0 focus:outline-none focus:ring-0 hover:bg-none hover:shadow-none hover:outline-none ${isMicOn ? 'bg-red-600' : 'bg-gray-600'}`}
             onClick={handleMic}
           >
-            <MicrophoneIcon className='h-16 w-16 text-white opacity-70' />
+            <MicrophoneIcon className='h-16 w-16 opacity-70' />
           </button>
         </div>
       </div>

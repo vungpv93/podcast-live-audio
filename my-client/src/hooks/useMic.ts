@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import toast from 'react-hot-toast';
 
 interface IMic {
   isMicOn: boolean,
@@ -21,7 +22,7 @@ export function useMic(): IMic {
       if (localStream) {
         const audioTracks: MediaStreamTrack[] = localStream.getAudioTracks();
         if (audioTracks.length > 0) {
-          const newState: boolean = !audioTracks[0].enabled;
+          const newState: boolean = !audioTracks[ 0 ].enabled;
           audioTracks.forEach((track: MediaStreamTrack) => ( track.enabled = newState ));
           setIsMicOn(newState);
         }
@@ -32,6 +33,29 @@ export function useMic(): IMic {
       setLocalStream(mediaStream);
       setIsMicOn(true);
     } catch (e) {
+      let msg = 'Không thể truy cập MICRO.';
+      if (e instanceof DOMException) {
+        switch (e.name) {
+          case 'NotAllowedError':
+            msg = 'Thiết bị của bạn đã từ chối cấp quyền MICRO.';
+            break;
+          case 'NotFoundError':
+            msg = 'Không tìm thấy thiết bị MICRO.';
+            break;
+          case 'NotReadableError':
+            msg = 'Không thể sử dụng MICRO (có thể đang bị ứng dụng khác chiếm).';
+            break;
+          case 'SecurityError':
+          case 'AbortError':
+            msg = 'Truy cập micro bị chặn do lý do bảo mật.';
+            break;
+          default:
+            msg = `Lỗi không xác định: ${e.message}`;
+        }
+      } else if (e instanceof Error) {
+        msg = e.message;
+      }
+      toast.error(msg);
     }
   }, [localStream]);
   
