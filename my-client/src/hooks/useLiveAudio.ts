@@ -151,8 +151,8 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
   
   const consume: ({ producerId }: ProducerInfo) => Promise<void> = useCallback(
     async ({ producerId }: ProducerInfo): Promise<void> => {
-      const device = deviceRef.current;
-      const recvTransport = recvTransportRef.current;
+      const device: types.Device | null = deviceRef.current;
+      const recvTransport: types.Transport | null = recvTransportRef.current;
       if (!device || !recvTransport || !socket) return;
       
       socket.emit(
@@ -209,7 +209,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
         }
       );
     },
-    [audioStream, roomId, socket]
+    [roomId, socket]
   );
   
   const joinRoom: () => Promise<void> = useCallback(async (): Promise<void> => {
@@ -234,7 +234,9 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
         
         const { sendTransportOptions, recvTransportOptions, rtpCapabilities, existingProducers } =
           response;
+        toast.success('Thiết lập join room thành công');
         const newDevice = await createDevice(rtpCapabilities);
+        toast.success('Thiết lập device thành công');
         // Gui Audio
         if (sendTransportOptions) {
           const newSendTransport = createSendTransport(newDevice, sendTransportOptions);
@@ -245,6 +247,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
               track: audioTrack
             });
           }
+          toast.success('Thiết lập đường truyền gửi audio thành công');
         }
         // Nhan Audio
         createRecvTransport(newDevice, recvTransportOptions);
@@ -252,9 +255,10 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
         for (const producerInfo of existingProducers) {
           await consume(producerInfo);
         }
+        toast.success('Thiết lập đường truyền nhận audio thành công');
       }
     );
-  }, [socket, roomId, localStream, createDevice, createRecvTransport, consume]);
+  }, [socket, roomId, createDevice, createRecvTransport, createSendTransport, localStream, consume]);
   
   const leaveRoom: () => void = useCallback(() => {
     if (!socket) return;
