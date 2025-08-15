@@ -3,6 +3,7 @@ import * as mediasoupClient from 'mediasoup-client';
 import type { Device, types } from 'mediasoup-client';
 import type { ConsumerKind, ILiveAudio } from '../dto/live-audio.ts';
 import { SocketEvent } from '../conf/socket.ts';
+import toast from 'react-hot-toast';
 
 interface TransportOptions {
   id: string;
@@ -118,6 +119,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
   ) => | mediasoupClient.types.Transport<mediasoupClient.types.AppData> | undefined = useCallback(
     (device: Device, transportOptions: TransportOptions) => {
       if (!socket) {
+        toast.error('No socket connection');
         console.warn('No socket connection');
         return;
       }
@@ -172,6 +174,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
           };
         }): Promise<void> => {
           if (response.error) {
+            toast.error('Error consuming');
             console.error('Error consuming:', response.error);
             return;
           }
@@ -199,6 +202,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
             try {
               await audioElement.play();
             } catch (err) {
+              toast.error('Audio playback failed');
               console.error('Audio playback failed:', err);
             }
           }
@@ -223,6 +227,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
         existingProducers: ProducerInfo[];
       }): Promise<void> => {
         if (response.error) {
+          toast.error('Error joining room');
           console.error('Error joining room:', response.error);
           return;
         }
@@ -256,6 +261,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
     
     socket.emit('leave-room', (response?: { error?: string }) => {
       if (response?.error) {
+        toast.error('Error leaving room');
         console.error('Error leaving room:', response.error);
         return;
       }
@@ -265,6 +271,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
         try {
           consumer.close();
         } catch (err) {
+          toast.error('Close consumer failed');
           console.error('Close consumer failed:', err);
         }
       });
@@ -275,6 +282,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
         try {
           track.stop();
         } catch (err) {
+          toast.error('Stop track failed');
           console.error('Stop track failed:', err);
         }
       });
@@ -288,6 +296,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
         try {
           recvTransportRef.current.close();
         } catch (err) {
+          toast.error('Close recvTransport failed');
           console.error('Close recvTransport failed:', err);
         }
         recvTransportRef.current = null;
@@ -303,6 +312,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
       try {
         c.pause();
       } catch (err) {
+        toast.error('Pause consumer failed');
         console.error('Pause consumer failed:', err);
       }
     });
@@ -314,6 +324,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
         c.resume();
         setAudioStream(undefined);
       } catch (err) {
+        toast.error('Resume consumer failed');
         console.error('Resume consumer failed:', err);
       }
     });
