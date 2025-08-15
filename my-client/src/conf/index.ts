@@ -1,4 +1,4 @@
 export const ConfigApp = {
   roomId: '9001',
-  socketURL: 'https://podcast.opencms.live'
+  socketURL: 'http://192.168.1.14:5000'
 }
