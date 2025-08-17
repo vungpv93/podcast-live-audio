@@ -18,14 +18,13 @@ export class TransportService {
       throw new Error(`Room ${roomId} not found`);
     }
 
-    const transport: WebRtcTransport =
-      await room.router.router.createWebRtcTransport({
-        ...webRtcTransport_options,
-        appData: {
-          peerId,
-          clientDirection: direction,
-        },
-      });
+    const transport: WebRtcTransport = await room.router.router.createWebRtcTransport({
+      ...webRtcTransport_options,
+      appData: {
+        peerId,
+        clientDirection: direction,
+      },
+    });
 
     this.roomService.addPeerToRoom(roomId, peerId);
 

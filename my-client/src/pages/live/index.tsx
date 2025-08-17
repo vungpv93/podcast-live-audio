@@ -1,24 +1,60 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Header from '../../components/header';
 import Participants from '../../components/participants';
 import LiveAudio from '../../components/live-audio';
 import Comments from '../../components/comments';
 import type { Socket } from 'socket.io-client';
 import type { IAuth } from '../../dto/live-audio.ts';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import Cookies from 'js-cookie';
+import Forbidden from '../403';
 
 interface ILiveAudio {
-  roomId: string;
-  socket?: Socket;
-  auth?: IAuth;
+  socket: Socket;
+  auth: IAuth;
 }
 
-const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth }: ILiveAudio) => {
+const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
+  const [authenticated, setAuthenticated] = useState<boolean | undefined>(
+    undefined,
+  );
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const token = params.get('tk');
+
+    if (token) {
+      Cookies.set('token', token, {
+        path: `/live/${id}`,
+        secure: false,
+        sameSite: 'strict',
+      });
+      navigate(`/live/${id}`, { replace: true });
+      return;
+    } else {
+      const cookieToken = Cookies.get('token');
+      if (!cookieToken) {
+        console.error('Cookie not found');
+        setAuthenticated(false);
+      } else {
+        setAuthenticated(true);
+      }
+    }
+  }, [id, location.search, navigate]);
+
+  if (authenticated === false) {
+    return <Forbidden />;
+  }
+
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white">
-      <Header roomId={roomId} socket={socket} />
+      <Header roomId={id || ''} socket={socket} />
       <main className="flex flex-1 overflow-hidden">
         <Participants />
-        <LiveAudio roomId={roomId} socket={socket} auth={auth} />
+        <LiveAudio roomId={id || ''} socket={socket} auth={auth} />
         <Comments />
       </main>
     </div>

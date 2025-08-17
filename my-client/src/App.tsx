@@ -1,13 +1,20 @@
 import Live from './pages/live';
 import { useSocket } from './hooks/useSocket.ts';
-import { ConfigApp } from './conf';
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import toast from 'react-hot-toast';
 import { AuthList } from './mock/auth.ts';
-import type { IUser } from './dto/live-audio.ts';
+import type { IAuth, IUser } from './dto/live-audio.ts';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import type { Socket } from 'socket.io-client';
+import NotFound from './pages/404';
 
 type AppProps = {
   duuid: string;
+};
+
+type PageProps = {
+  auth: IAuth;
+  socket: Socket;
 };
 
 function App({ duuid }: AppProps) {
@@ -19,13 +26,23 @@ function App({ duuid }: AppProps) {
     }
   }, [duuid, socket?.id]);
 
+  const props: PageProps = useMemo(() => {
+    return {
+      socket: socket,
+      auth: AuthList.host as IUser,
+    } as PageProps;
+  }, [socket]);
+
   return (
-    <Live
-      roomId={ConfigApp.roomId}
-      socket={socket}
-      auth={AuthList.host as IUser}
-      // auth={AuthList.guest as IUser}
-    />
+    <>
+      <Router>
+        <Routes>
+          <Route path="/live/:id" element={<Live {...props} />} />
+          {/*<Route path="/live/:id/audience" element={<Live {...props} />} />*/}
+          <Route path="*" element={<NotFound {...props} />} />
+        </Routes>
+      </Router>
+    </>
   );
 }
 

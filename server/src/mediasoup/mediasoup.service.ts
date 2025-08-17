@@ -1,19 +1,30 @@
 import { IWorker } from './interface/media-resources.interfaces';
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Inject } from '@nestjs/common';
 import * as mediasoup from 'mediasoup';
 import * as os from 'os';
+import { MediasoupResource } from './mediasoup.type';
 
 @Injectable()
-export class MediasoupService implements OnModuleInit {
+export class MediasoupService {
   private nextWorkerIndex = 0;
   private workers: IWorker[] = [];
 
-  constructor() {}
+  constructor(@Inject('RESOURCE') private resource: MediasoupResource) {}
 
   /**
    * create mediasoup workers on module init
    */
-  public async onModuleInit() {
+  // public async onModuleInit() {
+  //   const numWorkers = os.cpus().length;
+  //   for (let i = 0; i < numWorkers; ++i) {
+  //     await this.createWorker();
+  //   }
+  //
+  //   const lives: string[] = ['550e8400-e29b-41d4-a716-446655440000'];
+  //   console.log('Khởi tạo lại cac phòng live : ', lives);
+  // }
+
+  public async initialWorkers(): Promise<void> {
     const numWorkers = os.cpus().length;
     for (let i = 0; i < numWorkers; ++i) {
       await this.createWorker();
@@ -22,8 +33,8 @@ export class MediasoupService implements OnModuleInit {
 
   private async createWorker() {
     const worker = await mediasoup.createWorker({
-      rtcMinPort: 6002,
-      rtcMaxPort: 6202,
+      rtcMinPort: 40000,
+      rtcMaxPort: 49999,
     });
 
     worker.on('died', () => {

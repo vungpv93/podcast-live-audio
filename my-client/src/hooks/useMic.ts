@@ -10,14 +10,14 @@ interface IMic {
 export function useMic(): IMic {
   const [isMicOn, setIsMicOn] = useState<boolean>(false);
   const [localStream, setLocalStream] = useState<MediaStream>();
-  
+
   const handleMic = useCallback(async (): Promise<void> => {
     if (isMicOn) {
       setIsMicOn(false);
       setLocalStream(undefined);
       return;
     }
-    
+
     try {
       if (localStream) {
         const audioTracks: MediaStreamTrack[] = localStream.getAudioTracks();
@@ -28,7 +28,7 @@ export function useMic(): IMic {
         }
         return;
       }
-      
+
       const mediaStream: MediaStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
       setLocalStream(mediaStream);
       setIsMicOn(true);
@@ -57,7 +57,7 @@ export function useMic(): IMic {
       }
       toast.error(msg);
     }
-  }, [localStream]);
-  
+  }, [isMicOn, localStream]);
+
   return { localStream, isMicOn, handleMic };
 }

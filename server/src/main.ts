@@ -1,10 +1,6 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
-import {
-  ClassSerializerInterceptor,
-  Logger,
-  ValidationPipe,
-} from '@nestjs/common';
+import { ClassSerializerInterceptor, Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { winstonLogger } from './common/logger/winston.util';
 import * as passport from 'passport';
@@ -13,19 +9,19 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import * as expressBasicAuth from 'express-basic-auth';
 
 class Application {
-  private logger = new Logger(Application.name);
-  private DEV_MODE: boolean;
-  private PORT: string;
-  private corsOriginList: string[];
-  private ADMIN_USER: string;
-  private ADMIN_PASSWORD: string;
-  private Domain: string;
+  private readonly logger = new Logger(Application.name);
+  private readonly DEV_MODE: boolean;
+  private readonly PORT: string;
+  private readonly corsOriginList: string[];
+  private readonly ADMIN_USER: string;
+  private readonly ADMIN_PASSWORD: string;
+  private readonly Domain: string;
 
-  constructor(private server: NestExpressApplication) {
+  constructor(private readonly server: NestExpressApplication) {
     this.server = server;
 
     if (!process.env.SECRET_KEY) this.logger.error('Set "SECRET" env');
-    this.DEV_MODE = process.env.NODE_ENV === 'production' ? false : true;
+    this.DEV_MODE = process.env.NODE_ENV !== 'production';
     this.PORT = process.env.PORT || '5000';
     this.corsOriginList = process.env.CORS_ORIGIN_LIST
       ? process.env.CORS_ORIGIN_LIST.split(',').map((origin) => origin.trim())
@@ -54,11 +50,7 @@ class Application {
       this.server,
       SwaggerModule.createDocument(
         this.server,
-        new DocumentBuilder()
-          .setTitle('API DOCS')
-          .setDescription('nestJS boilerplate')
-          .setVersion('1.0')
-          .build(),
+        new DocumentBuilder().setTitle('API DOCS').setDescription('nestJS boilerplate').setVersion('1.0').build(),
       ),
     );
   }
@@ -77,9 +69,7 @@ class Application {
       }),
     );
     this.server.use(passport.initialize());
-    this.server.useGlobalInterceptors(
-      new ClassSerializerInterceptor(this.server.get(Reflector)),
-    );
+    this.server.useGlobalInterceptors(new ClassSerializerInterceptor(this.server.get(Reflector)));
   }
 
   async bootstrap() {
