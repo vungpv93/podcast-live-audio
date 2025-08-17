@@ -1,18 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { ILiveAudio } from '../../dto/live-audio';
 import AudioAnalyzer from '../AudioAnalyzer';
 import { useLiveAudio } from '../../hooks/useLiveAudio';
 import { MicrophoneIcon } from '@heroicons/react/24/solid';
 import { useMic } from '../../hooks/useMic.ts';
+import { useLive } from '../../hooks/useLive.ts';
 
 const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
   const { isMicOn, handleMic, localStream } = useMic();
+  const { liveData, handleLive } = useLive({ roomId, socket });
+
   const { audioStream, joinRoom, leaveRoom, handlePause, handleResume } =
     useLiveAudio({
       roomId,
       socket,
       localStream,
     });
+
+  const [isJoined, setIsJoined] = useState<boolean>(false);
 
   return (
     <section className="flex-[3] flex flex-col p-4 w-full">
@@ -29,22 +34,59 @@ const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
       </div>
 
       <div className="flex my-4 items-center justify-between bg-gray-800 p-2 rounded mb-4 shadow-md w-full">
-        <div className="flex space-x-2 align-center">
-          {auth?.role === 'host' ? (
-            <button
-              className="px-3 py-1 bg-green-600 rounded"
-              onClick={joinRoom}
-            >
-              Phát live audio
+        <div>
+          {liveData && liveData?.live ? (
+            <button className="px-3 py-1 bg-red-600 rounded hover:bg-green-700">
+              Đang live
             </button>
           ) : (
             <button
-              className="px-3 py-1 bg-green-600 rounded"
-              onClick={joinRoom}
+              className="px-3 py-1 bg-green-600 rounded hover:bg-green-700"
+              onClick={async () => {
+                handleLive();
+                await joinRoom();
+                setIsJoined(true);
+              }}
             >
-              Nghe live audio
+              Bắt đầu live
             </button>
           )}
+        </div>
+        <div className="flex space-x-2 align-center">
+          {liveData.live && (
+            <>
+              {auth?.role === 'host' ? (
+                <>
+                  {!isJoined ? (
+                    <button
+                      className={`px-3 py-1 bg-green-600 rounded`}
+                      onClick={async () => {
+                        await joinRoom();
+                        setIsJoined(true);
+                      }}
+                    >
+                      Join live
+                    </button>
+                  ) : (
+                    <button
+                      disabled={true}
+                      className={`px-3 py-1 bg-gray-600 rounded disabled:bg-gray-400 disabled:cursor-not-allowed`}
+                    >
+                      Đã join
+                    </button>
+                  )}
+                </>
+              ) : (
+                <button
+                  className="px-3 py-1 bg-green-600 rounded"
+                  onClick={joinRoom}
+                >
+                  Nghe live audio
+                </button>
+              )}
+            </>
+          )}
+
           <button
             className="px-3 py-1 bg-green-600 rounded hover:bg-green-700 hidden"
             onClick={handleResume}

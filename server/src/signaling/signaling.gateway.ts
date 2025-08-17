@@ -13,6 +13,7 @@ import { JoinChannelDto } from './dto/join-channel.dto';
 import { RoomService } from 'src/mediasoup/room/room.service';
 import { TransportService } from 'src/mediasoup/transport/transport.service';
 import { ProducerConsumerService } from 'src/mediasoup/producer-consumer/producer-consumer.service';
+import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
@@ -21,6 +22,8 @@ import { ProducerConsumerService } from 'src/mediasoup/producer-consumer/produce
   },
 })
 export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  private logger: Logger = new Logger(SignalingGateway.name);
+
   @WebSocketServer()
   server: Server;
 
@@ -40,11 +43,46 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   async handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
+    (await this.roomService.getRooms()).forEach((room, roomId) => {
+      if (room.peers.has(client.id)) {
+        room.peers.delete(client.id);
+        console.log(`Removed ${client.id} from room ${roomId}`);
+      }
+    });
   }
 
   @SubscribeMessage('ROOM_SUBSCRIBES')
   public async handleRoomSubscribes(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
+    console.log(`SubscribeMessage -> ROOM_SUBSCRIBES -> `, args);
     client.join(args?.roomId);
+    return { status: true, errcd: null };
+  }
+
+  @SubscribeMessage('ROOM_STATUS')
+  public async handleRoomLiveStatus(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
+    console.log(`SubscribeMessage -> ROOM_STATUS -> `, args);
+    const roomId = args?.roomId;
+    const room = this.roomService.getRoom(roomId);
+    let dataRes = {
+      live: !!room,
+      roomId: roomId,
+    };
+    if (room) {
+      dataRes = Object.assign(dataRes, {
+        rtpCapabilities: room.router.router.rtpCapabilities,
+        peers: Array.from(room.peers.keys()),
+      });
+    }
+
+    return { status: true, errcd: null, data: dataRes };
+  }
+
+  @SubscribeMessage('ROOM_LIVE')
+  public async handleRoomBeginLive(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
+    console.log(`SubscribeMessage -> ROOM_LIVE -> `, args);
+    const roomId = args?.roomId;
+    await this.roomService.createRoom(roomId);
+    client.to(roomId).emit('ROOM_LIVE', { roomId });
     return { status: true, errcd: null };
   }
 
