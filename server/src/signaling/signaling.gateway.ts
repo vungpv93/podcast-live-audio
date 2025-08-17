@@ -13,7 +13,8 @@ import { JoinChannelDto } from './dto/join-channel.dto';
 import { RoomService } from 'src/mediasoup/room/room.service';
 import { TransportService } from 'src/mediasoup/transport/transport.service';
 import { ProducerConsumerService } from 'src/mediasoup/producer-consumer/producer-consumer.service';
-import { Logger } from '@nestjs/common';
+import { LiveDto } from './dto/live.dto';
+import { RedisService } from '../mediasoup/redis.service';
 
 @WebSocketGateway({
   cors: {
@@ -22,13 +23,11 @@ import { Logger } from '@nestjs/common';
   },
 })
 export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
-  private logger: Logger = new Logger(SignalingGateway.name);
-
-  @WebSocketServer()
-  server: Server;
+  @WebSocketServer() server: Server;
 
   constructor(
     private readonly roomService: RoomService,
+    private readonly redisService: RedisService,
     private readonly transportService: TransportService,
     private readonly producerConsumerService: ProducerConsumerService,
   ) {}
@@ -38,30 +37,37 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+    const token =
+      (client.handshake.auth?.token as string) ||
+      (client.handshake.query?.token as string) ||
+      client.handshake.headers['authorization']?.toString().split(' ')[1];
+    console.log(`Client connected: ${client.id} - token: ${token}`);
+    // TODO Can 1 buoc thuc hien verify token.
+    client.data.auth = { id: 1, nickname: 'VungPV', guard: 'ADM' };
   }
 
   async handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
-    (await this.roomService.getRooms()).forEach((room, roomId) => {
-      if (room.peers.has(client.id)) {
-        room.peers.delete(client.id);
-        console.log(`Removed ${client.id} from room ${roomId}`);
-      }
-    });
   }
 
-  @SubscribeMessage('ROOM_SUBSCRIBES')
-  public async handleRoomSubscribes(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
-    console.log(`SubscribeMessage -> ROOM_SUBSCRIBES -> `, args);
-    client.join(args?.roomId);
-    return { status: true, errcd: null };
+  /**
+   * @param client
+   * @param args
+   */
+  @SubscribeMessage('SUBSCRIBES_LIVE')
+  public async handleRoomSubscribes(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+    console.log('SUBSCRIBES_LIVE : ', client.id);
+    client.join(args.roomId);
+    return { evt: 'SUBSCRIBES_LIVE', status: true, errcd: null, data: null };
   }
 
-  @SubscribeMessage('ROOM_STATUS')
-  public async handleRoomLiveStatus(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
-    console.log(`SubscribeMessage -> ROOM_STATUS -> `, args);
-    const roomId = args?.roomId;
+  /**
+   * @param client
+   * @param args
+   */
+  @SubscribeMessage('LIVE_DETAIL')
+  public async handleRoomLiveStatus(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+    const roomId = args.roomId;
     const room = this.roomService.getRoom(roomId);
     let dataRes = {
       live: !!room,
@@ -70,25 +76,33 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     if (room) {
       dataRes = Object.assign(dataRes, {
         rtpCapabilities: room.router.router.rtpCapabilities,
-        peers: Array.from(room.peers.keys()),
       });
     }
 
-    return { status: true, errcd: null, data: dataRes };
+    return { evt: 'LIVE_DETAIL', status: true, errcd: null, data: dataRes };
   }
 
-  @SubscribeMessage('ROOM_LIVE')
-  public async handleRoomBeginLive(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
-    console.log(`SubscribeMessage -> ROOM_LIVE -> `, args);
-    const roomId = args?.roomId;
-    await this.roomService.createRoom(roomId);
-    client.to(roomId).emit('ROOM_LIVE', { roomId });
-    return { status: true, errcd: null };
+  @SubscribeMessage('BEGIN_LIVE')
+  public async handleRoomBeginLive(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+    const roomId = args.roomId;
+    await this.roomService.createRoom(args.roomId);
+    await this.redisService.storeRoom(args.roomId);
+    client.to(args.roomId).emit('BEGIN_LIVE', { roomId });
+    return { evt: 'BEGIN_LIVE', status: true, errcd: null, data: null };
   }
 
   @SubscribeMessage('join-room')
-  async handleJoinChannel(@MessageBody() dto: JoinChannelDto, @ConnectedSocket() client: Socket) {
+  public async handleJoinChannel(@MessageBody() dto: JoinChannelDto, @ConnectedSocket() client: Socket) {
     const { roomId, peerId } = dto;
+    console.log('JOIN room', {
+      roomId,
+      peerId,
+      sid: client.id,
+    });
+
+    await this.redisService.addHost(client, roomId, 1);
+    const data = await this.redisService.getHosts(roomId);
+    console.log('data ', data);
 
     try {
       const newRoom = await this.roomService.createRoom(roomId);
@@ -135,7 +149,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   @SubscribeMessage('leave-room')
-  async handleLeaveRoom(@ConnectedSocket() client: Socket) {
+  public async handleLeaveRoom(@ConnectedSocket() client: Socket) {
     const rooms = Array.from(client.rooms);
 
     for (const roomId of rooms) {
@@ -170,7 +184,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   @SubscribeMessage('connect-transport')
-  async handleConnectTransport(@MessageBody() data, @ConnectedSocket() client: Socket) {
+  public async handleConnectTransport(@MessageBody() data, @ConnectedSocket() client: Socket) {
     const { roomId, peerId, dtlsParameters, transportId } = data;
     const room = this.roomService.getRoom(roomId);
     const peer = room?.peers.get(peerId);
@@ -188,7 +202,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   @SubscribeMessage('produce')
-  async handleProduce(@MessageBody() data, @ConnectedSocket() client: Socket) {
+  public async handleProduce(@MessageBody() data, @ConnectedSocket() client: Socket) {
     const { roomId, peerId, kind, transportId, rtpParameters } = data;
 
     try {
@@ -211,7 +225,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   @SubscribeMessage('consume')
-  async handleConsume(@MessageBody() data, @ConnectedSocket() client: Socket) {
+  public async handleConsume(@MessageBody() data, @ConnectedSocket() client: Socket) {
     const { roomId, peerId, producerId, rtpCapabilities, transportId } = data;
     try {
       const consumerData = await this.producerConsumerService.createConsumer({

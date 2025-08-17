@@ -1,11 +1,5 @@
 import * as mediasoup from 'mediasoup';
-import {
-  Consumer,
-  Producer,
-  Router,
-  WebRtcTransport,
-  Worker,
-} from 'mediasoup/node/lib/types';
+import { Consumer, Producer, Router, WebRtcTransport, Worker } from 'mediasoup/node/lib/types';
 
 export interface ITransportData {
   isConsumer?: boolean;

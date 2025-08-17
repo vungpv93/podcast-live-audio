@@ -2,22 +2,24 @@ import React, { useState } from 'react';
 import type { ILiveAudio } from '../../dto/live-audio';
 import AudioAnalyzer from '../AudioAnalyzer';
 import { useLiveAudio } from '../../hooks/useLiveAudio';
-import { MicrophoneIcon } from '@heroicons/react/24/solid';
 import { useMic } from '../../hooks/useMic.ts';
 import { useLive } from '../../hooks/useLive.ts';
+import { HiStatusOnline } from 'react-icons/hi';
+import { HiPause, HiPlay } from 'react-icons/hi2';
+import { BsMicFill, BsMicMuteFill } from 'react-icons/bs';
+import Volume from '../Volume';
 
 const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
+  console.log('auth is ', auth);
+  const [volume, setVolume] = useState<number>(80);
   const { isMicOn, handleMic, localStream } = useMic();
   const { liveData, handleLive } = useLive({ roomId, socket });
 
-  const { audioStream, joinRoom, leaveRoom, handlePause, handleResume } =
-    useLiveAudio({
-      roomId,
-      socket,
-      localStream,
-    });
-
-  const [isJoined, setIsJoined] = useState<boolean>(false);
+  const { audioStream, joinRoom } = useLiveAudio({
+    roomId,
+    socket,
+    localStream,
+  });
 
   return (
     <section className="flex-[3] flex flex-col p-4 w-full">
@@ -28,7 +30,11 @@ const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
             className={`h-24 w-24 rounded-full flex items-center justify-center border-0 focus:outline-none focus:ring-0 hover:bg-none hover:shadow-none hover:outline-none ${isMicOn ? 'bg-red-600' : 'bg-gray-600'}`}
             onClick={handleMic}
           >
-            <MicrophoneIcon className="h-16 w-16 opacity-70" />
+            {isMicOn ? (
+              <BsMicFill className="h-16 w-16 opacity-70" />
+            ) : (
+              <BsMicMuteFill className="h-16 w-16 opacity-70" />
+            )}
           </button>
         </div>
       </div>
@@ -36,74 +42,38 @@ const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
       <div className="flex my-4 items-center justify-between bg-gray-800 p-2 rounded mb-4 shadow-md w-full">
         <div>
           {liveData && liveData?.live ? (
-            <button className="px-3 py-1 bg-red-600 rounded hover:bg-green-700">
-              Đang live
+            <button className="px-2 py-1 text-sm bg-red-600 rounded hover:bg-green-700">
+              Đang diễn ra
             </button>
           ) : (
             <button
-              className="px-3 py-1 bg-green-600 rounded hover:bg-green-700"
-              onClick={async () => {
-                handleLive();
-                await joinRoom();
-                setIsJoined(true);
-              }}
+              className="px-2 py-1 text-sm bg-green-600 rounded hover:bg-green-700"
+              onClick={handleLive}
             >
               Bắt đầu live
             </button>
           )}
         </div>
-        <div className="flex space-x-2 align-center">
-          {liveData.live && (
-            <>
-              {auth?.role === 'host' ? (
-                <>
-                  {!isJoined ? (
-                    <button
-                      className={`px-3 py-1 bg-green-600 rounded`}
-                      onClick={async () => {
-                        await joinRoom();
-                        setIsJoined(true);
-                      }}
-                    >
-                      Join live
-                    </button>
-                  ) : (
-                    <button
-                      disabled={true}
-                      className={`px-3 py-1 bg-gray-600 rounded disabled:bg-gray-400 disabled:cursor-not-allowed`}
-                    >
-                      Đã join
-                    </button>
-                  )}
-                </>
-              ) : (
-                <button
-                  className="px-3 py-1 bg-green-600 rounded"
-                  onClick={joinRoom}
-                >
-                  Nghe live audio
-                </button>
-              )}
-            </>
-          )}
 
-          <button
-            className="px-3 py-1 bg-green-600 rounded hover:bg-green-700 hidden"
-            onClick={handleResume}
-          >
-            Tiếp tục
+        <div className="flex space-x-2 align-center">
+          <button className="px-2 py-1 text-sm bg-green-600 rounded hover:bg-green-700">
+            <HiPause />
+          </button>
+          <button className="px-2 py-1 text-sm bg-green-600 rounded hover:bg-green-700">
+            <HiPlay />
+          </button>
+          <button className="px-2 py-1 text-sm bg-green-600 rounded hover:bg-green-700">
+            <Volume value={volume} onChange={(v) => setVolume(v)} />
+          </button>
+
+          <button className="px-2 py-1 text-sm bg-red-600 rounded hover:bg-red-700">
+            <HiStatusOnline />
           </button>
           <button
-            className="px-3 py-1 bg-red-600 rounded hover:bg-red-700 hidden"
-            onClick={handlePause}
+            className="px-2 py-1 text-sm bg-green-600 rounded"
+            onClick={joinRoom}
           >
-            Tạm dừng
-          </button>
-          <button
-            className="px-3 py-1 bg-red-600 rounded hover:bg-red-700 hidden"
-            onClick={leaveRoom}
-          >
-            Rời phòng
+            Join live
           </button>
         </div>
       </div>

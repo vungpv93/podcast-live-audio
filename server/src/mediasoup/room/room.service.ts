@@ -1,4 +1,4 @@
-import { mediaCodecs } from './../media.config';
+import { mediaCodecs } from '../media.config';
 import { Injectable } from '@nestjs/common';
 import { IRoom } from './room.interface';
 import { MediasoupService } from '../mediasoup.service';
@@ -6,6 +6,7 @@ import { MediasoupService } from '../mediasoup.service';
 @Injectable()
 export class RoomService {
   private rooms: Map<string, IRoom> = new Map();
+
   constructor(private readonly mediasoupService: MediasoupService) {}
 
   public async getRooms(): Promise<Map<string, IRoom>>

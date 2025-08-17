@@ -29,10 +29,10 @@ export function useLive({ roomId, socket }: ILiveAudio) {
   useEffect(() => {
     if (roomId && socket?.id) {
       socket.emit(
-        'ROOM_SUBSCRIBES',
+        'SUBSCRIBES_LIVE',
         { roomId: roomId },
         (response: ISubscribesResponse) => {
-          console.log('[socket.emit] - ROOM_SUBSCRIBES', response);
+          console.log('SUBSCRIBES_LIVE', response);
           toast.success('Subscribes thành công.');
           setLiveData((prev) => ({
             ...prev,
@@ -40,8 +40,8 @@ export function useLive({ roomId, socket }: ILiveAudio) {
           }));
         },
       );
-      socket.emit('ROOM_STATUS', { roomId: roomId }, (response: IResponse) => {
-        console.log('[socket.emit] - ROOM_STATUS', response);
+      socket.emit('LIVE_DETAIL', { roomId: roomId }, (response: IResponse) => {
+        console.log('LIVE_DETAIL', response);
         if (response.data?.live === true) {
           toast.success('Phiên live đang diễn ra');
           setLiveData((prev) => ({
@@ -49,7 +49,7 @@ export function useLive({ roomId, socket }: ILiveAudio) {
             live: true,
           }));
         } else {
-          toast.success('Phiên live audio chưa bắt đầu.');
+          toast.error('Phiên live audio chưa bắt đầu.');
           setLiveData((prev) => ({
             ...prev,
             live: false,
@@ -57,8 +57,8 @@ export function useLive({ roomId, socket }: ILiveAudio) {
         }
       });
 
-      socket.on('ROOM_LIVE', () => {
-        console.log('[socket.on] - ROOM_LIVE');
+      socket.on('BEGIN_LIVE', () => {
+        console.log('BEGIN_LIVE');
         toast.success('Phiên live bắt đầu');
         setLiveData((prev) => ({
           ...prev,
@@ -68,13 +68,13 @@ export function useLive({ roomId, socket }: ILiveAudio) {
     }
   }, [roomId, socket, socket?.id]);
 
-  const handleLive: () => void = useCallback(() => {
+  const handleLive: () => Promise<void> = useCallback(async () => {
     if (roomId && socket?.id) {
       socket.emit(
-        'ROOM_LIVE',
+        'BEGIN_LIVE',
         { roomId: roomId },
         (response: IStartLiveResponse) => {
-          console.log('[socket.emit] - ROOM_LIVE', response);
+          console.log('BEGIN_LIVE', response);
           if (response.status) {
             toast.success('Phiên live bắt đầu');
             setLiveData((prev) => ({
@@ -87,7 +87,7 @@ export function useLive({ roomId, socket }: ILiveAudio) {
         },
       );
     }
-  }, [roomId, socket, socket?.id]);
+  }, [roomId, socket]);
 
   return { status: true, liveData: liveData, handleLive: handleLive };
 }
