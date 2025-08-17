@@ -21,8 +21,7 @@ import { ProducerConsumerService } from 'src/mediasoup/producer-consumer/produce
   },
 })
 export class SignalingGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
-{
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -30,7 +29,8 @@ export class SignalingGateway
     private readonly roomService: RoomService,
     private readonly transportService: TransportService,
     private readonly producerConsumerService: ProducerConsumerService,
-  ) {}
+  ) {
+  }
 
   afterInit() {
     console.log(`Server initialized`);
@@ -42,6 +42,12 @@ export class SignalingGateway
 
   async handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
+  }
+
+  @SubscribeMessage('ROOM_SUBSCRIBES')
+  public async handleRoomSubscribes(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
+    client.join(args?.roomId);
+    return { status: true, errcd: null };
   }
 
   @SubscribeMessage('join-room')
