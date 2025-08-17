@@ -8,6 +8,11 @@ export class RoomService {
   private rooms: Map<string, IRoom> = new Map();
   constructor(private readonly mediasoupService: MediasoupService) {}
 
+  public async getRooms(): Promise<Map<string, IRoom>>
+  {
+    return this.rooms;
+  }
+
   public async createRoom(roomId: string): Promise<IRoom> {
     if (this.rooms.has(roomId)) {
       return this.rooms.get(roomId);

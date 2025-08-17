@@ -8,7 +8,12 @@ export function useSocket() {
   const [socket, setSocket] = useState<Socket>();
 
   useEffect(() => {
-    const newSocket = io(ConfigApp.socketURL, { transports: ['websocket'] });
+    const opts = {
+      transports: ['websocket'],
+      auth: { id: 1, nickname: 'VungPV' },
+    };
+    const newSocket = io(ConfigApp.socketURL, opts);
+
     setSocket(newSocket);
 
     newSocket.on(SocketEvent.Connect, () => {
