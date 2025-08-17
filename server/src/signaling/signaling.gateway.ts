@@ -20,8 +20,7 @@ import { ProducerConsumerService } from 'src/mediasoup/producer-consumer/produce
     credentials: true,
   },
 })
-export class SignalingGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server: Server;
 
@@ -29,8 +28,7 @@ export class SignalingGateway
     private readonly roomService: RoomService,
     private readonly transportService: TransportService,
     private readonly producerConsumerService: ProducerConsumerService,
-  ) {
-  }
+  ) {}
 
   afterInit() {
     console.log(`Server initialized`);
@@ -51,27 +49,14 @@ export class SignalingGateway
   }
 
   @SubscribeMessage('join-room')
-  async handleJoinChannel(
-    @MessageBody() dto: JoinChannelDto,
-    @ConnectedSocket() client: Socket,
-  ) {
+  async handleJoinChannel(@MessageBody() dto: JoinChannelDto, @ConnectedSocket() client: Socket) {
     const { roomId, peerId } = dto;
 
     try {
       const newRoom = await this.roomService.createRoom(roomId);
-      const sendTransportOptions =
-        await this.transportService.createWebRtcTransport(
-          roomId,
-          peerId,
-          'send',
-        );
+      const sendTransportOptions = await this.transportService.createWebRtcTransport(roomId, peerId, 'send');
 
-      const recvTransportOptions =
-        await this.transportService.createWebRtcTransport(
-          roomId,
-          peerId,
-          'recv',
-        );
+      const recvTransportOptions = await this.transportService.createWebRtcTransport(roomId, peerId, 'recv');
 
       client.join(roomId); // Socket.io 룸에 참가
 
@@ -147,10 +132,7 @@ export class SignalingGateway
   }
 
   @SubscribeMessage('connect-transport')
-  async handleConnectTransport(
-    @MessageBody() data,
-    @ConnectedSocket() client: Socket,
-  ) {
+  async handleConnectTransport(@MessageBody() data, @ConnectedSocket() client: Socket) {
     const { roomId, peerId, dtlsParameters, transportId } = data;
     const room = this.roomService.getRoom(roomId);
     const peer = room?.peers.get(peerId);
