@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'live-app',
       script: 'dist/main.js',
-      instances: 'max',
+      instances: 1,
       exec_mode: 'cluster',
       watch: false,
       env: {
