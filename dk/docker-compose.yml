@@ -1,0 +1,8 @@
+services:
+  redis:
+    image: redis:5-alpine
+    volumes:
+      - ./docker/data/redis:/data
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
