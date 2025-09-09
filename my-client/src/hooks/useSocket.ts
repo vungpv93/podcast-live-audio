@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
-import { ConfigApp } from '../conf';
 import { SocketEvent } from '../conf/socket.ts';
 
 export function useSocket() {
@@ -8,7 +7,7 @@ export function useSocket() {
   const [socket, setSocket] = useState<Socket>();
 
   useEffect(() => {
-    const newSocket = io(ConfigApp.socketURL, {
+    const newSocket = io(`${import.meta.env.VITE_SOCKET_URL}`, {
       transports: ['websocket'],
       auth: {
         token: 'faker_token',

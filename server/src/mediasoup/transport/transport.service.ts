@@ -18,6 +18,7 @@ export class TransportService {
       throw new Error(`Room ${roomId} not found`);
     }
 
+    console.log('webRtcTransport_options', webRtcTransport_options);
     const transport: WebRtcTransport = await room.router.router.createWebRtcTransport({
       ...webRtcTransport_options,
       appData: {

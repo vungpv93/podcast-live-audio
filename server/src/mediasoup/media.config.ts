@@ -1,4 +1,7 @@
+import * as dotenv from 'dotenv';
 import * as mediasoup from 'mediasoup';
+
+dotenv.config();
 
 export const mediaCodecs: mediasoup.types.RtpCodecCapability[] = [
   {
@@ -20,10 +23,8 @@ export const mediaCodecs: mediasoup.types.RtpCodecCapability[] = [
 export const webRtcTransport_options: mediasoup.types.WebRtcTransportOptions = {
   listenIps: [
     {
-      ip: '0.0.0.0',
-      announcedIp: '192.168.1.4', // 194.233.78.141
-      // ip: process.env.WEBRTC_LISTEN_IP || '127.0.0.1',
-      // announcedIp: process.env.WEBRTC_ANNOUNCED_IP || '127.0.0.1',
+      ip: process.env.WEBRTC_LISTEN_IP || '127.0.0.1',
+      announcedIp: process.env.WEBRTC_ANNOUNCED_IP || '127.0.0.1',
     },
   ],
   enableUdp: true,
