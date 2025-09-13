@@ -8,8 +8,8 @@ import { SignalingModule } from './signaling/signaling.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { redisStore } from 'cache-manager-redis-store';
 import * as process from 'node:process';
-
-// import { TypeOrmModule } from '@nestjs/typeorm';
+import * as entities from './entities/index';
+import { TypeOrmModule } from '@nestjs/typeorm';
 
 @Module({
   imports: [
@@ -21,21 +21,22 @@ import * as process from 'node:process';
       }),
     }),
     // TODO Need enable db mysql
-    // TypeOrmModule.forRoot({
-    //   type: 'mysql',
-    //   host: process.env.DB_HOST,
-    //   port: Number(process.env.DB_PORT),
-    //   username: process.env.DB_USERNAME,
-    //   password: process.env.DB_PASSWORD,
-    //   database: process.env.DB_DATABASE,
-    //   synchronize: false,
-    //   logging: true,
-    //   migrationsRun: false,
-    //   autoLoadEntities: true,
-    //   poolSize: 100,
-    //   logger: 'file',
-    //   maxQueryExecutionTime: 3000,
-    // }),
+    TypeOrmModule.forRoot({
+      type: 'mysql',
+      host: process.env.DB_HOST,
+      port: Number(process.env.DB_PORT),
+      username: process.env.DB_USERNAME,
+      password: process.env.DB_PASSWORD,
+      database: process.env.DB_DATABASE,
+      synchronize: false,
+      logging: true,
+      migrationsRun: false,
+      autoLoadEntities: true,
+      poolSize: 100,
+      logger: 'file',
+      maxQueryExecutionTime: 3000,
+    }),
+    TypeOrmModule.forFeature(Object.values(entities as any)),
     HttpModule,
     MediasoupModule,
     SignalingModule,

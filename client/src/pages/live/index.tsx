@@ -8,6 +8,7 @@ import type { IAuth } from '../../dto/live-audio.ts';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import Forbidden from '../403';
+import LoadingPage from '../../components/loading/LoadingPage.tsx';
 
 interface ILiveAudio {
   socket: Socket;
@@ -15,6 +16,7 @@ interface ILiveAudio {
 }
 
 const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
+  const [isReady, setIsReady] = useState<boolean>(false);
   const [authenticated, setAuthenticated] = useState<boolean | undefined>(
     undefined,
   );
@@ -33,6 +35,7 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
         sameSite: 'strict',
       });
       navigate(`/live/${id}`, { replace: true });
+      setIsReady(true);
       return;
     } else {
       const cookieToken = Cookies.get('token');
@@ -42,8 +45,13 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
       } else {
         setAuthenticated(true);
       }
+      setIsReady(true);
     }
   }, [id, location.search, navigate]);
+
+  if (!isReady) {
+    return <LoadingPage />;
+  }
 
   if (authenticated === false) {
     return <Forbidden />;

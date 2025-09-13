@@ -5,7 +5,7 @@ import { useLiveAudio } from '../../hooks/useLiveAudio';
 import { useMic } from '../../hooks/useMic.ts';
 import { useLive } from '../../hooks/useLive.ts';
 import { HiStatusOnline } from 'react-icons/hi';
-import { HiPause, HiPlay } from 'react-icons/hi2';
+import { HiPlay } from 'react-icons/hi2';
 import { BsMicFill, BsMicMuteFill } from 'react-icons/bs';
 import Volume from '../Volume';
 
@@ -42,9 +42,15 @@ const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
       <div className="flex my-4 items-center justify-between bg-gray-800 p-2 rounded mb-4 shadow-md w-full">
         <div>
           {liveData && liveData?.live ? (
-            <button className="px-2 py-1 text-sm bg-red-600 rounded hover:bg-green-700">
-              Đang diễn ra
-            </button>
+            <>
+              <button className="text-sm bg-red-600 hover:bg-red-700">
+                <HiStatusOnline />
+              </button>
+              &nbsp;&nbsp;
+              <button className="px-2 py-1 text-sm bg-red-600 rounded hover:bg-green-700">
+                Kết thúc
+              </button>
+            </>
           ) : (
             <button
               className="px-2 py-1 text-sm bg-green-600 rounded hover:bg-green-700"
@@ -56,18 +62,14 @@ const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
         </div>
 
         <div className="flex space-x-2 align-center">
-          <button className="px-2 py-1 text-sm bg-green-600 rounded hover:bg-green-700">
-            <HiPause />
-          </button>
+          {/*<button className="px-2 py-1 text-sm bg-green-600 rounded hover:bg-green-700">*/}
+          {/*  <HiPause />*/}
+          {/*</button>*/}
           <button className="px-2 py-1 text-sm bg-green-600 rounded hover:bg-green-700">
             <HiPlay />
           </button>
           <button className="px-2 py-1 text-sm bg-green-600 rounded hover:bg-green-700">
             <Volume value={volume} onChange={(v) => setVolume(v)} />
-          </button>
-
-          <button className="px-2 py-1 text-sm bg-red-600 rounded hover:bg-red-700">
-            <HiStatusOnline />
           </button>
           <button
             className="px-2 py-1 text-sm bg-green-600 rounded"

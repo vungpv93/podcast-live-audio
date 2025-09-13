@@ -15,6 +15,9 @@ import { TransportService } from 'src/mediasoup/transport/transport.service';
 import { ProducerConsumerService } from 'src/mediasoup/producer-consumer/producer-consumer.service';
 import { LiveDto } from './dto/live.dto';
 import { RedisService } from '../mediasoup/redis.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { LiveProgramEntity } from '../entities';
+import { Repository } from 'typeorm';
 
 @WebSocketGateway({
   cors: {
@@ -30,6 +33,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     private readonly redisService: RedisService,
     private readonly transportService: TransportService,
     private readonly producerConsumerService: ProducerConsumerService,
+    @InjectRepository(LiveProgramEntity) private readonly liveProgramRepo: Repository<LiveProgramEntity>,
   ) {}
 
   afterInit() {
@@ -68,8 +72,10 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('LIVE_DETAIL')
   public async handleRoomLiveStatus(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
     const roomId = args.roomId;
+    const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: roomId } });
     const room = this.roomService.getRoom(roomId);
     let dataRes = {
+      entity: entity,
       live: !!room,
       roomId: roomId,
     };
@@ -87,8 +93,18 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     const roomId = args.roomId;
     await this.roomService.createRoom(args.roomId);
     await this.redisService.storeRoom(args.roomId);
+    const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: args.roomId } });
+    if (entity) await this.liveProgramRepo.update(entity.id, { status: 'ongoing' });
     client.to(args.roomId).emit('BEGIN_LIVE', { roomId });
     return { evt: 'BEGIN_LIVE', status: true, errcd: null, data: null };
+  }
+
+  @SubscribeMessage('END_LIVE')
+  public async handleLiveEnded(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+    const roomId = args.roomId;
+    const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: args.roomId } });
+    if (entity) await this.liveProgramRepo.update(entity.id, { status: 'finished' });
+    client.to(args.roomId).emit('END_LIVE', { roomId });
   }
 
   @SubscribeMessage('join-room')
