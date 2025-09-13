@@ -30,7 +30,7 @@ export function useLive({ roomId, socket }: ILiveAudio) {
     if (roomId && socket?.id) {
       socket.emit(
         'SUBSCRIBES_LIVE',
-        { roomId: roomId },
+        { roomId: roomId, liveId: roomId },
         (response: ISubscribesResponse) => {
           console.log('SUBSCRIBES_LIVE', response);
           toast.success('Subscribes thành công.');
@@ -40,26 +40,30 @@ export function useLive({ roomId, socket }: ILiveAudio) {
           }));
         },
       );
-      socket.emit('LIVE_DETAIL', { roomId: roomId }, (response: IResponse) => {
-        console.log('LIVE_DETAIL', response);
-        if (response.data?.live === true) {
-          toast.success('Phiên live đang diễn ra');
-          setLiveData((prev) => ({
-            ...prev,
-            live: true,
-          }));
-        } else {
-          toast.error('Phiên live audio chưa bắt đầu.');
-          setLiveData((prev) => ({
-            ...prev,
-            live: false,
-          }));
-        }
-      });
+      socket.emit(
+        'LIVE_DETAIL',
+        { roomId: roomId, liveId: roomId },
+        (response: IResponse) => {
+          console.log('LIVE_DETAIL', response);
+          if (response.data?.live === true) {
+            toast.success('Phiên live đang diễn ra');
+            setLiveData((prev) => ({
+              ...prev,
+              live: true,
+            }));
+          } else {
+            toast.error('Phiên live audio chưa bắt đầu.');
+            setLiveData((prev) => ({
+              ...prev,
+              live: false,
+            }));
+          }
+        },
+      );
 
-      socket.on('BEGIN_LIVE', () => {
-        console.log('BEGIN_LIVE');
-        toast.success('Phiên live bắt đầu');
+      socket.on('STARTED_LIVE', () => {
+        console.log('STARTED_LIVE');
+        toast.success('Phiên live đã được bắt đầu');
         setLiveData((prev) => ({
           ...prev,
           live: true,
@@ -72,7 +76,7 @@ export function useLive({ roomId, socket }: ILiveAudio) {
     if (roomId && socket?.id) {
       socket.emit(
         'BEGIN_LIVE',
-        { roomId: roomId },
+        { roomId: roomId, liveId: roomId },
         (response: IStartLiveResponse) => {
           console.log('BEGIN_LIVE', response);
           if (response.status) {

@@ -1,8 +1,4 @@
-import {
-  IConsumer,
-  IProducer,
-  ITransport,
-} from '../interface/media-resources.interfaces';
+import { IConsumer, IProducer, ITransport } from '../interface/media-resources.interfaces';
 
 export interface Peer {
   id: string;

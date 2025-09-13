@@ -72,11 +72,16 @@ export type ActiveSpeakerObserverAppData = {
 };
 
 export type MediasoupResource = {
-  workers: types.Worker<WorkerAppData>[];
-  routers: types.Router<RouterAppData>[];
-  consumers: types.Consumer<ConsumerProducerAppData>[];
-  producers: types.Producer<ConsumerProducerAppData>[];
-  transports: types.Transport<TransportAppData>[];
+  workers: Map<string, types.Worker>;
+  routers: Map<string, types.Router>;
+  transports: Map<string, types.Transport>;
+  producers: Map<string, types.Producer>;
+  consumers: Map<string, types.Consumer>;
+  // workers: types.Worker<WorkerAppData>[];
+  // routers: types.Router<RouterAppData>[];
+  // consumers: types.Consumer<ConsumerProducerAppData>[];
+  // producers: types.Producer<ConsumerProducerAppData>[];
+  // transports: types.Transport<TransportAppData>[];
   audioLevelObserver: types.AudioLevelObserver<AudioLevelObserverAppData>[];
   activeSpeakerObserver: types.ActiveSpeakerObserver<ActiveSpeakerObserverAppData>[];
   currentWorker: number;

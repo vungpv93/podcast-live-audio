@@ -3,6 +3,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import * as mediasoup from 'mediasoup';
 import * as os from 'os';
 import { MediasoupResource } from './mediasoup.type';
+import { Worker } from 'mediasoup/node/lib/types';
 
 @Injectable()
 export class MediasoupService {
@@ -42,13 +43,18 @@ export class MediasoupService {
       setTimeout(() => process.exit(1), 2000);
     });
 
+    this.resource.workers.set(String(worker.pid), worker);
     this.workers.push({ worker, routers: new Map() });
     return worker;
   }
 
   public getWorker() {
-    const worker = this.workers[this.nextWorkerIndex].worker;
-    this.nextWorkerIndex = (this.nextWorkerIndex + 1) % this.workers.length;
+    const worker: Worker = Array.from(this.resource.workers.values())[this.nextWorkerIndex];
+    this.nextWorkerIndex = (this.nextWorkerIndex + 1) % this.resource.workers.size;
     return worker;
+
+    // const worker = this.workers[this.nextWorkerIndex].worker;
+    // this.nextWorkerIndex = (this.nextWorkerIndex + 1) % this.workers.length;
+    // return worker;
   }
 }
