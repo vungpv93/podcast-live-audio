@@ -1,6 +1,7 @@
-import { RtpParameters, RtpCapabilities } from 'mediasoup/node/lib/types';
+import { RtpParameters, RtpCapabilities, Router } from 'mediasoup/node/lib/types';
 
 export interface IProduceParams {
+  liveId: string;
   roomId: string;
   peerId: string;
   kind: 'audio' | 'video';
@@ -9,6 +10,8 @@ export interface IProduceParams {
 }
 
 export interface IConsumeParams {
+  router: Router;
+  liveId: string;
   roomId: string;
   peerId: string;
   producerId: string;

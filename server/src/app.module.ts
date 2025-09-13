@@ -17,7 +17,10 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     CacheModule.registerAsync({
       isGlobal: true,
       useFactory: async () => ({
-        store: await redisStore({ socket: { host: process.env.REDIS_HOST, port: 6379 }, ttl: 60 * 60 }),
+        store: await redisStore({
+          socket: { host: process.env.REDIS_HOST, port: Number(process.env.REDIS_PORT) },
+          ttl: 60 * 60,
+        }),
       }),
     }),
     // TODO Need enable db mysql

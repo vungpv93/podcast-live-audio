@@ -5,4 +5,13 @@ services:
       - ./docker/data/redis:/data
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "63791:6379"
+
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: redis_insight
+    restart: always
+    ports:
+      - "55401:5540"
+    depends_on:
+      - redis
