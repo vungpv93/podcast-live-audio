@@ -39,7 +39,7 @@ function App({ duuid }: AppProps) {
         <Routes>
           <Route path="/live/:id" element={<Live {...props} />} />
           {/*<Route path="/live/:id/audience" element={<Live {...props} />} />*/}
-          <Route path="*" element={<NotFound {...props} />} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>
     </>
