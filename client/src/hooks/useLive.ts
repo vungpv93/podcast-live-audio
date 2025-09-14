@@ -9,11 +9,24 @@ interface ILiveAudio {
   socket?: Socket;
 }
 
+export interface LiveEntity {
+  id: number;
+  code: string;
+  name: string;
+  image: string;
+  status: string;
+  scheduled_at: string;
+  live_at: string;
+  recorder_flag: number;
+  deleted_at: string;
+}
+
 export interface IResponse extends IResBase {
   data: {
     live: boolean;
     roomId: string;
     rtpCapabilities: IRtpCapabilities;
+    entity: LiveEntity | null;
   };
 }
 
@@ -21,9 +34,16 @@ export type ISubscribesResponse = IResBase;
 export type IStartLiveResponse = IResBase;
 
 export function useLive({ roomId, socket }: ILiveAudio) {
-  const [liveData, setLiveData] = useState({
+  const [isReady, setIsReady] = useState<boolean>(false);
+
+  const [liveData, setLiveData] = useState<{
+    subscribes: boolean;
+    live: boolean;
+    entity: LiveEntity | null | undefined;
+  }>({
     subscribes: false,
     live: false,
+    entity: undefined,
   });
 
   useEffect(() => {
@@ -50,17 +70,23 @@ export function useLive({ roomId, socket }: ILiveAudio) {
             setLiveData((prev) => ({
               ...prev,
               live: true,
+              entity: response.data?.entity
+                ? (response.data?.entity as LiveEntity)
+                : null,
             }));
           } else {
             toast.error('Phiên live audio chưa bắt đầu.');
             setLiveData((prev) => ({
               ...prev,
               live: false,
+              entity: response.data?.entity
+                ? (response.data?.entity as LiveEntity)
+                : null,
             }));
           }
         },
       );
-
+      setIsReady(true);
       socket.on('STARTED_LIVE', () => {
         console.log('STARTED_LIVE');
         toast.success('Phiên live đã được bắt đầu');
@@ -93,5 +119,29 @@ export function useLive({ roomId, socket }: ILiveAudio) {
     }
   }, [roomId, socket]);
 
-  return { status: true, liveData: liveData, handleLive: handleLive };
+  const handleEndLive: () => Promise<void> = useCallback(async () => {
+    if (roomId && socket?.id) {
+      socket.emit(
+        'END_LIVE',
+        { roomId, liveId: roomId },
+        (response: IStartLiveResponse) => {
+          console.log('END_LIVE', response);
+          if (response.status) {
+            toast.success('Phiên live đã kết thúc');
+            setLiveData((prev) => ({ ...prev, live: false }));
+          } else {
+            toast.error('Không thể kết thúc phiên live. Vui lòng thử lại.');
+          }
+        },
+      );
+    }
+  }, [roomId, socket]);
+
+  return {
+    status: true,
+    isReady: isReady,
+    liveData: liveData,
+    handleLive: handleLive,
+    closeLive: handleEndLive,
+  };
 }
