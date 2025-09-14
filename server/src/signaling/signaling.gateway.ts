@@ -59,7 +59,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     client.data.auth = { id: 1, nickname: 'VungPV', guard: 'ADM' };
   }
 
-  async handleDisconnect(client: Socket) {
+  public async handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
   }
 
@@ -237,8 +237,6 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     console.log(`The handle event JOIN_LIVE : `, client.id);
 
     const { liveId, peerId } = args;
-    const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
-    if (entity) await this.liveProgramRepo.update(entity.id, { status: 'finished' });
 
     const liveRedis = await this.redisService.getLive(liveId);
     const routerId = liveRedis?.routerId;
@@ -443,7 +441,13 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     };
   }
 
+  /**
+   * @functionName emitLiveRestored
+   * @param liveId
+   * @description Thong bao cho tat ca client trong phong liveId biet phien live da duoc khoi phuc
+   * @event RESTORED_LIVE
+   */
   public async emitLiveRestored(liveId: string): Promise<void> {
-    this.server.to(liveId).emit('LIVE_RESTORED', liveId);
+    this.server.to(liveId).emit('RESTORED_LIVE', liveId);
   }
 }

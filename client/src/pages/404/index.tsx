@@ -1,15 +1,6 @@
 import React from 'react';
-import type { Socket } from 'socket.io-client';
-import type { IAuth } from '../../dto/live-audio.ts';
-import { useParams } from 'react-router-dom';
 
-interface ILiveAudio {
-  socket: Socket;
-  auth: IAuth;
-}
-
-const NotFound: React.FC<ILiveAudio> = ({}: ILiveAudio) => {
-  useParams<{ id: string }>();
+const NotFound: React.FC = () => {
   return (
     <div className="flex flex-col h-screen bg-gray-900 text-white">
       <main className="flex flex-1 items-center justify-center">

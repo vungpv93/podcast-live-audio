@@ -1,4 +1,3 @@
-import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App.tsx';
@@ -18,8 +17,9 @@ function ensureBrowserUuid() {
 
 const duuid = ensureBrowserUuid();
 
+// StrictMode
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
+  <>
     <App duuid={duuid} />
     <Toaster
       toastOptions={{
@@ -27,5 +27,5 @@ createRoot(document.getElementById('root')!).render(
         position: 'bottom-right',
       }}
     />
-  </StrictMode>,
+  </>,
 );

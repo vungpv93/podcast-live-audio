@@ -2,7 +2,6 @@ import { useRef, useState, useCallback, type RefObject } from 'react';
 import * as mediasoupClient from 'mediasoup-client';
 import type { Device, types } from 'mediasoup-client';
 import type { ConsumerKind, ILiveAudio } from '../dto/live-audio.ts';
-import { SocketEvent } from '../conf/socket.ts';
 import toast from 'react-hot-toast';
 
 interface TransportOptions {
@@ -310,70 +309,6 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
       localStream,
     ]);
 
-  const joinRoom: () => Promise<void> = useCallback(async (): Promise<void> => {
-    if (!socket || !roomId) return;
-
-    socket.emit(
-      SocketEvent.JoinRoom,
-      { roomId, peerId: socket.id },
-      async (response: {
-        error?: string;
-        sendTransportOptions?: TransportOptions;
-        recvTransportOptions: TransportOptions;
-        rtpCapabilities: types.RtpCapabilities;
-        peerIds: string[];
-        existingProducers: ProducerInfo[];
-      }): Promise<void> => {
-        if (response.error) {
-          toast.error('Error joining room');
-          console.error('Error joining room:', response.error);
-          return;
-        }
-
-        const {
-          sendTransportOptions,
-          recvTransportOptions,
-          rtpCapabilities,
-          existingProducers,
-        } = response;
-        toast.success('Thiết lập join room thành công');
-        const newDevice = await createDevice(rtpCapabilities);
-        toast.success('Thiết lập device thành công');
-        // Gui Audio
-        if (sendTransportOptions) {
-          const newSendTransport = createSendTransport(
-            newDevice,
-            sendTransportOptions,
-          );
-          // const audioTrack: MediaStreamTrack | undefined = await localAudioStreamAndTrack();
-          const audioTrack: MediaStreamTrack | undefined =
-            localStream?.getAudioTracks()[0];
-          if (audioTrack && newSendTransport) {
-            await newSendTransport.produce({
-              track: audioTrack,
-            });
-          }
-          toast.success('Thiết lập đường truyền gửi audio thành công');
-        }
-        // Nhan Audio
-        createRecvTransport(newDevice, recvTransportOptions);
-
-        for (const producerInfo of existingProducers) {
-          await consume(producerInfo);
-        }
-        toast.success('Thiết lập đường truyền nhận audio thành công 111');
-      },
-    );
-  }, [
-    socket,
-    roomId,
-    createDevice,
-    createRecvTransport,
-    createSendTransport,
-    localStream,
-    consume,
-  ]);
-
   const leaveRoom: () => void = useCallback(() => {
     if (!socket) return;
 
@@ -455,7 +390,5 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
     leaveRoom,
     handlePause,
     handleResume,
-    join1: joinRoom,
-    join2: handleJoinLive,
   };
 }

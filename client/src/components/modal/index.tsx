@@ -12,7 +12,7 @@ const Modal: React.FC<ModalProps> = ({
   children,
   onClose,
   isOpen,
-}) => {
+}: ModalProps) => {
   if (!isOpen) return null;
 
   return (
@@ -23,7 +23,7 @@ const Modal: React.FC<ModalProps> = ({
         <div className="mt-6 flex justify-end">
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 transition"
+            className="px-5 py-2 sm rounded-lg bg-blue-600 hover:bg-blue-700 transition"
           >
             Đóng
           </button>

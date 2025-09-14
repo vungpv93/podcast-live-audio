@@ -9,6 +9,8 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import Forbidden from '../403';
 import LoadingPage from '../../components/loading/LoadingPage.tsx';
+import { useLive } from '../../hooks/useLive.ts';
+import NotFound from '../404';
 
 interface ILiveAudio {
   socket: Socket;
@@ -23,6 +25,11 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { liveData, isReady: liveIsReady } = useLive({
+    roomId: id || '',
+    socket,
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -49,12 +56,16 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
     }
   }, [id, location.search, navigate]);
 
-  if (!isReady) {
+  if (!isReady || !liveIsReady) {
     return <LoadingPage />;
   }
 
   if (authenticated === false) {
     return <Forbidden />;
+  }
+
+  if (liveData.entity === null) {
+    return <NotFound />;
   }
 
   return (

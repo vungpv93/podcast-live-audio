@@ -10,7 +10,7 @@ export function useSocket() {
     const newSocket = io(`${import.meta.env.VITE_SOCKET_URL}`, {
       transports: ['websocket'],
       auth: {
-        token: 'faker_token',
+        token: 'FAKER_TOKEN',
       },
     });
     setSocket(newSocket);
