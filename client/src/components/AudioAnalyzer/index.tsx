@@ -1,7 +1,8 @@
 import React, { type RefObject, useEffect, useRef } from 'react';
 
 interface Props {
-  audioStream?: MediaStream;
+  audioStream?: MediaStream; // remote audio
+  localStream?: MediaStream; // local mic
 }
 
 declare global {
@@ -10,7 +11,7 @@ declare global {
   }
 }
 
-const Index: React.FC<Props> = ({ audioStream }: Props) => {
+const Index: React.FC<Props> = ({ audioStream, localStream }: Props) => {
   const canvasRef: RefObject<HTMLCanvasElement | null> =
     useRef<HTMLCanvasElement | null>(null);
 
@@ -32,7 +33,7 @@ const Index: React.FC<Props> = ({ audioStream }: Props) => {
   };
 
   useEffect((): (() => void) | undefined => {
-    if (!audioStream || !canvasRef.current) {
+    if ((!audioStream && !localStream) || !canvasRef.current) {
       drawSilentLine();
       return;
     }
@@ -47,7 +48,20 @@ const Index: React.FC<Props> = ({ audioStream }: Props) => {
     // Tạo analyser cho mỗi track
     const analysers: AnalyserNode[] = [];
     const sources: MediaStreamAudioSourceNode[] = [];
-    audioStream.getTracks().forEach((track) => {
+
+    // localStream
+    localStream?.getTracks().forEach((track) => {
+      const trackStream = new MediaStream([track]);
+      const source = audioCtx.createMediaStreamSource(trackStream);
+      const analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+      analysers.push(analyser);
+      sources.push(source);
+    });
+
+    // audioStream
+    audioStream?.getTracks().forEach((track) => {
       const trackStream = new MediaStream([track]);
       const source = audioCtx.createMediaStreamSource(trackStream);
       const analyser = audioCtx.createAnalyser();
@@ -108,7 +122,7 @@ const Index: React.FC<Props> = ({ audioStream }: Props) => {
       analysers.forEach((a) => a.disconnect());
       audioCtx.close();
     };
-  }, [audioStream]);
+  }, [audioStream, localStream]);
 
   return (
     <canvas
