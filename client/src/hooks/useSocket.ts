@@ -7,6 +7,10 @@ export function useSocket() {
   const [socket, setSocket] = useState<Socket>();
 
   useEffect(() => {
+    console.log(
+      `import.meta.env.VITE_SOCKET_URL `,
+      import.meta.env.VITE_SOCKET_URL,
+    );
     const newSocket = io(`${import.meta.env.VITE_SOCKET_URL}`, {
       transports: ['websocket'],
       auth: {

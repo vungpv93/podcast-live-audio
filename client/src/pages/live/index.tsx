@@ -74,7 +74,7 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
       <main className="flex flex-1 overflow-hidden">
         <Participants />
         <LiveAudio roomId={id || ''} socket={socket} auth={auth} />
-        <Comments />
+        <Comments roomId={id || ''} socket={socket} auth={auth} />
       </main>
     </div>
   );

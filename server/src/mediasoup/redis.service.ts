@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
-import { Socket } from 'socket.io';
 import * as moment from 'moment';
 import { Router } from 'mediasoup/node/lib/types';
 
@@ -13,31 +12,17 @@ export class RedisService {
     this.redis = new Redis({ host: process.env.REDIS_HOST, port: Number(process.env.REDIS_PORT) });
   }
 
+  /**
+   * @functionName initial
+   */
   public async initial() {
     await this.redis.set('App:Initialized', 'true');
   }
 
-  public async storeRoom(roomId: string): Promise<void> {
-    await this.redis.hmset(`room:${roomId}`, {
-      createdAt: Date.now().toString(),
-      status: 'live',
-    });
-  }
-
-  public async addHost(socket: Socket, roomId: string, userId: number): Promise<void> {
-    await this.redis.hset(`room:${roomId}:ADM`, socket.id, userId);
-    // await this.redis.hset(`room:${roomId}:USR`, socket.id, userId);
-  }
-
-  public async getHosts(roomId: string): Promise<{ socketId: string; userId: number; role: 'ADM' | 'USR' }[]> {
-    const hosts: Record<string, string> = await this.redis.hgetall(`room:${roomId}:ADM`);
-    return Object.entries(hosts).map(([socketId, userId]) => ({
-      socketId: socketId,
-      userId: Number(userId),
-      role: 'ADM',
-    }));
-  }
-
+  /**
+   * @param liveId
+   * @param router
+   */
   public async beginLive(liveId: string, router: Router): Promise<void> {
     await this.redis
       .multi()
@@ -99,5 +84,44 @@ export class RedisService {
   public async getLivesRestore(): Promise<string[]> {
     const keys = await this.redis.keys('live:*:status');
     return keys.map((key) => key.split(':')[1]);
+  }
+
+  /**
+   * ================================================================================
+   *                              #liveId Comments
+   * ================================================================================
+   */
+  /**
+   * Lưu bình luận vào Redis Sorted Set với điểm số là timestamp
+   * @param liveId
+   * @param score
+   * @param comment
+   */
+  public async storeComment(liveId: string, score: number, comment: any): Promise<void> {
+    await this.redis.zadd(`live:${liveId}:comments`, score, JSON.stringify(comment));
+  }
+
+  /**
+   * @param liveId
+   * @param cursor
+   */
+  public async getComments(liveId: string, cursor?: string): Promise<any> {
+    const limit = 20;
+    const max = cursor ? `(${cursor}` : '+inf'; // exclusive nếu có cursor
+    const min = '-inf';
+    const items = await this.redis.zrevrangebyscore(`live:${liveId}:comments`, max, min, 'LIMIT', 0, limit);
+    const comments = items.map((strObj) => JSON.parse(strObj));
+
+    let nextCursor: string | null = null;
+    if (comments.length > 0) {
+      const last = comments[comments.length - 1];
+      nextCursor = last.score || null;
+    }
+
+    return {
+      data: comments,
+      nextCursor,
+      hasMore: !!nextCursor,
+    };
   }
 }
