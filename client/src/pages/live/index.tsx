@@ -9,8 +9,8 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import Forbidden from '../403';
 import LoadingPage from '../../components/loading/LoadingPage.tsx';
-import { useLive } from '../../hooks/useLive.ts';
-import NotFound from '../404';
+import { useAuthVerified } from '../../hooks/useAuthVerified.ts';
+import LiveNotFound from '../../components/404/live';
 
 interface ILiveAudio {
   socket: Socket;
@@ -26,8 +26,8 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { liveData, isReady: liveIsReady } = useLive({
-    roomId: id || '',
+  const { liveEntity, isReady: liveIsReady } = useAuthVerified({
+    liveId: id || '',
     socket,
   });
 
@@ -64,8 +64,12 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
     return <Forbidden />;
   }
 
-  if (liveData.entity === null) {
-    return <NotFound />;
+  if (liveEntity === null) {
+    return <LiveNotFound />;
+  }
+
+  if (!liveEntity) {
+    return null;
   }
 
   return (
@@ -73,8 +77,13 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
       <Header roomId={id || ''} socket={socket} />
       <main className="flex flex-1 overflow-hidden">
         <Participants />
-        <LiveAudio roomId={id || ''} socket={socket} auth={auth} />
-        <Comments />
+        <LiveAudio
+          roomId={id || ''}
+          socket={socket}
+          auth={auth}
+          entity={liveEntity}
+        />
+        <Comments roomId={id || ''} socket={socket} auth={auth} />
       </main>
     </div>
   );

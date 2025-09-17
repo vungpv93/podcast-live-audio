@@ -7,6 +7,7 @@ export interface ILiveAudio {
   socket?: Socket;
   localStream?: MediaStream;
   auth?: IUser;
+  entity?: ILiveEntity;
 }
 
 export type UserRole = 'host' | 'guest';
@@ -18,3 +19,15 @@ export interface IUser {
 }
 
 export type IAuth = IUser;
+
+export interface ILiveEntity {
+  id: number;
+  code: string;
+  name: string;
+  image: string;
+  status: string;
+  scheduled_at: string;
+  live_at: string;
+  recorder_flag: number;
+  deleted_at: string;
+}

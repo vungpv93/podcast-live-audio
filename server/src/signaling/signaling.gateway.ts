@@ -24,6 +24,8 @@ import { Router, Worker } from 'mediasoup/node/lib/types';
 import { Inject, Logger } from '@nestjs/common';
 import { MediasoupResource } from '../mediasoup/mediasoup.type';
 import * as moment from 'moment';
+import { v4 as uuidv4 } from 'uuid';
+import { CommentDelDto, CommentDto, CreateCommentDto } from './dto/comment.dto';
 
 @WebSocketGateway({
   cors: {
@@ -94,6 +96,36 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       status: true,
       errcd: null,
       data: null,
+    };
+  }
+
+  @SubscribeMessage('AUTH_VERIFIED')
+  public async handleAuthVerified(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+    this.logger.log('AUTH_VERIFIED : ', client.id);
+    const liveId = args.liveId;
+    const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
+    if (!entity) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'AUTH_VERIFIED',
+        status: false,
+        errcd: ERRCD.E100102,
+        data: {
+          auth: null, // This is current user entity from mysql database
+          entity: null, // This is live_programs entity from mysql database
+        },
+      };
+    }
+
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'AUTH_VERIFIED',
+      status: true,
+      errcd: null,
+      data: {
+        auth: null, // This is current user entity from mysql database
+        entity: entity, // This is live_programs entity from mysql database
+      },
     };
   }
 
@@ -449,5 +481,105 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    */
   public async emitLiveRestored(liveId: string): Promise<void> {
     this.server.to(liveId).emit('RESTORED_LIVE', liveId);
+  }
+
+  /**
+   * =========================================================================
+   * Comments feature
+   * =========================================================================
+   */
+  /**
+   * @param client
+   * @param args
+   * @functionName handleComments
+   * @description Lay danh sach comment trong live
+   */
+  @SubscribeMessage('EVT_COMMENTS')
+  public async handleComments(@ConnectedSocket() client: Socket, @MessageBody() args: CommentDto): Promise<any> {
+    console.log('EVT_COMMENTS : ', client.id, args);
+    const comments = await this.redisService.getComments(args.liveId || null, args.cursor ?? undefined);
+    console.log(`The comments found: `, comments);
+
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'EVT_COMMENTS',
+      status: true,
+      errcd: null,
+      data: { comments },
+      args: args,
+    };
+  }
+
+  @SubscribeMessage('EVT_COMMENTS_CREATE')
+  public async handleCreateComments(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() args: CreateCommentDto,
+  ): Promise<any> {
+    console.log('EVT_COMMENTS_CREATE : ', client.id);
+    const score: number = Date.now() * 1000 + Math.floor(Math.random() * 1000);
+
+    const object = {
+      id: uuidv4(),
+      content: args.content,
+      userId: 187,
+      user: {
+        id: 187,
+        nickname: 'VungPV',
+        avatar: 'https://i.pravatar.cc/150?img=3',
+      },
+      status: 1, // 1 | 0
+      createdAt: moment().format('YYYY-MM-DD HH:mm:ss'),
+      score: score,
+    };
+
+    await this.redisService.storeComment(args.liveId, score, object);
+
+    this.server.to(args.liveId).emit('EVT_COMMENTS_CREATED', object);
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'EVT_COMMENTS_CREATE',
+      status: true,
+      errcd: null,
+      data: null,
+      args: args,
+    };
+  }
+
+  @SubscribeMessage('EVT_COMMENTS_UPDATE')
+  public async handleUpdateComments(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+    console.log('EVT_COMMENTS_UPDATE : ', client.id);
+
+    this.server.to(args.liveId).emit('EVT_COMMENTS_UPDATED', args);
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'EVT_COMMENTS_UPDATE',
+      status: true,
+      errcd: null,
+      data: null,
+      args: args,
+    };
+  }
+
+  @SubscribeMessage('EVT_COMMENTS_DELETE')
+  public async handleDeleteComments(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() args: CommentDelDto,
+  ): Promise<any> {
+    console.log('EVT_COMMENTS_DELETED : ', {
+      clientId: client.id,
+      ...args,
+    });
+
+    await this.redisService.deleteComment(args.liveId, args.score);
+
+    this.server.to(args.liveId).emit('EVT_COMMENTS_DELETED', args);
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'EVT_COMMENTS_DELETE',
+      status: true,
+      errcd: null,
+      data: null,
+      args: args,
+    };
   }
 }
