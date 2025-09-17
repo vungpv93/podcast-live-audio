@@ -9,8 +9,9 @@ import { HiPlay } from 'react-icons/hi2';
 import { BsMicFill, BsMicMuteFill } from 'react-icons/bs';
 import Volume from '../Volume';
 import { useConfirm } from '../../hooks/useConfirm.tsx';
+import moment from 'moment';
 
-const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
+const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth, entity }) => {
   console.log('auth is ', auth);
   const [volume, setVolume] = useState<number>(80);
   const { isMicOn, handleMic, localStream } = useMic();
@@ -66,6 +67,18 @@ const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
 
   return (
     <section className="flex-[3] flex flex-col p-4 w-full">
+      <div
+        className="flex justify-between items-center p-4 mb-4 text-sm text-blue-800 border border-blue-300 rounded-lg bg-blue-50 dark:bg-gray-800 dark:text-blue-400 dark:border-blue-800"
+        role="alert"
+      >
+        <span className="font-semibold">🎙️ {entity?.name}</span>
+        <span className="text-xs text-blue-800 dark:text-gray-300">
+          {moment(entity?.live_at || entity?.scheduled_at).format(
+            'YYYY-MM-DD HH:mm',
+          )}
+        </span>
+      </div>
+
       {liveData?.entity?.status === 'ongoing' && (
         <div
           className="flex items-center p-4 mb-4 text-sm text-green-800 border border-green-300 rounded-lg bg-green-50 dark:bg-gray-800 dark:text-green-400 dark:border-green-800"
