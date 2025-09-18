@@ -99,6 +99,21 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     };
   }
 
+  @SubscribeMessage('AUTH_VERIFIED')
+  public async handleAuthVerified(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+    this.logger.log('AUTH_VERIFIED : ', client.id);
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'AUTH_VERIFIED',
+      status: true,
+      errcd: null,
+      data: {
+        auth: null,   // This is current user entity from mysql database
+        entity: null, // This is live_programs entity from mysql database
+      },
+    };
+  }
+
   /**
    * @param client
    * @param args
