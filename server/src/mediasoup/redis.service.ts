@@ -15,8 +15,19 @@ export class RedisService {
   /**
    * @functionName initial
    */
-  public async initial() {
-    await this.redis.set('App:Initialized', 'true');
+  public async initial(socketId: string) {
+    await this.redis.zadd(`sockets`, Date.now(), socketId);
+  }
+
+  public async destroy(socketId: string) {
+    await this.redis.zrem(`sockets`, socketId);
+  }
+
+  /**
+   * @functionName sockets
+   */
+  public async sockets(liveId: string, socketId: string) {
+    await this.redis.zadd(`live:${liveId}:sockets`, Date.now(), socketId);
   }
 
   /**

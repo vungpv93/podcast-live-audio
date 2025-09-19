@@ -93,6 +93,28 @@ export function useLive({ roomId, socket }: ILiveAudio) {
         setLiveData((prev) => ({
           ...prev,
           live: true,
+          entity: prev?.entity
+            ? {
+                ...prev?.entity,
+                status: 'ongoing',
+              }
+            : null,
+        }));
+      });
+
+      //
+      socket.on('ENDED_LIVE', () => {
+        console.log('ENDED_LIVE');
+        toast.success('Phiên live đã kết thúc');
+        setLiveData((prev) => ({
+          ...prev,
+          live: true,
+          entity: prev?.entity
+            ? {
+              ...prev?.entity,
+              status: 'finished',
+            }
+            : null,
         }));
       });
     }

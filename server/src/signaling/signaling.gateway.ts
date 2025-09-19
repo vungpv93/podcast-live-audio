@@ -60,10 +60,13 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     console.log(`Client connected: ${client.id} - token: ${token}`);
     // TODO Can 1 buoc thuc hien verify token.
     client.data.auth = { id: 1, nickname: 'VungPV', guard: 'ADM' };
+
+    this.redisService.initial(client.id).then(() => {});
   }
 
   public async handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
+    this.redisService.destroy(client.id).then(() => {});
   }
 
   /**
@@ -90,6 +93,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('SUBSCRIBES_LIVE')
   public async handleRoomSubscribes(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
     this.logger.log('SUBSCRIBES_LIVE : ', client.id);
+    await this.redisService.sockets(args.liveId, client.id);
     client.join(args.roomId);
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
@@ -182,6 +186,29 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     const { liveId } = args;
 
     // 1. Kiểm tra trạng thái live trong Redis trước
+    const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
+    if (!entity) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'BEGIN_LIVE',
+        status: false,
+        errcd: ERRCD.E100102,
+        data: null,
+        args: args,
+      };
+    }
+
+    if (entity.status === 'finished') {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'BEGIN_LIVE',
+        status: false,
+        errcd: ERRCD.E100105,
+        data: null,
+        args: args,
+      };
+    }
+
     const liveRedis = await this.redisService.getLive(liveId);
     if (liveRedis) {
       return { evt: 'BEGIN_LIVE', status: false, errcd: ERRCD.E100101, data: null, args: args };
@@ -196,14 +223,13 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     this.resource.routers.set(router.id, router);
 
     // 3. Cap nhat trang thai live trong db
-    const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
     if (entity) await this.liveProgramRepo.update(entity.id, { status: 'ongoing' });
 
     // 4. Luu trang thai live trong redis
     await this.redisService.beginLive(liveId, router);
 
     // 5. Thong bao cho tat ca client trong phong live biet phien live da bat dau
-    client.to(liveId).emit('STARTED_LIVE', { liveId: liveId });
+    this.server.to(liveId).emit('STARTED_LIVE', { liveId: liveId });
 
     // 6. Tra ve ket qua
     return {
@@ -254,7 +280,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     await this.redisService.endLive(liveId);
 
     // Thong bao cho tat ca client trong phong live biet phien live da ket thuc
-    client.to(liveId).emit('ENDED_LIVE', { liveId });
+    this.server.to(liveId).emit('ENDED_LIVE', { liveId });
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
       evt: 'END_LIVE',
