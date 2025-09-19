@@ -15,7 +15,7 @@ import { ProducerConsumerService } from 'src/mediasoup/producer-consumer/produce
 import { LiveDto } from './dto/live.dto';
 import { RedisService } from '../mediasoup/redis.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LiveProgramEntity } from '../entities';
+import { LiveProgramEntity, PersonalAccessTokensEntity } from '../entities';
 import { Repository } from 'typeorm';
 import { ERRCD } from '../constants/ERRCD.enum';
 import { mediaCodecs } from '../mediasoup/media.config';
@@ -28,6 +28,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { CommentDelDto, CommentDto, CreateCommentDto, ICommentDto } from './dto/comment.dto';
 import { MockComments } from '../mock/comments';
 import { ResourcesService } from '../resources/resources.service';
+import { SanctumService } from '../mediasoup/sanctum/sanctum.service';
 
 @WebSocketGateway({
   cors: {
@@ -42,32 +43,46 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   constructor(
     private readonly redisService: RedisService,
+    private readonly sanctumService: SanctumService,
     private readonly mediasoupService: MediasoupService,
     private readonly transportService: TransportService,
     private readonly producerConsumerService: ProducerConsumerService,
     @InjectRepository(LiveProgramEntity) private readonly liveProgramRepo: Repository<LiveProgramEntity>,
+    @InjectRepository(PersonalAccessTokensEntity) private readonly tokenRepo: Repository<PersonalAccessTokensEntity>,
     @Inject('RESOURCE') private resource: MediasoupResource,
     private readonly resourcesService: ResourcesService,
   ) {}
 
   afterInit() {
-    console.log(`Server initialized`);
+    this.logger.log(`Server initialized`);
   }
 
-  public async handleConnection(client: Socket): Promise<void> {
-    const token =
-      (client.handshake.auth?.token as string) ||
-      (client.handshake.query?.token as string) ||
-      client.handshake.headers['authorization']?.toString().split(' ')[1];
-    console.log(`Client connected: ${client.id} - token: ${token}`);
-    // TODO Can 1 buoc thuc hien verify token.
-    client.data.auth = { id: 1, nickname: 'VungPV', guard: 'ADM' };
-
-    await this.redisService.initial(client.id);
+  public async handleConnection(client: Socket) {
+    try {
+      const token =
+        (client.handshake.auth?.token as string) ||
+        (client.handshake.query?.token as string) ||
+        client.handshake.headers['authorization']?.toString().split(' ')[1];
+      this.logger.log(`Client connected: ${client.id} - token: ${token}`);
+      // TODO Can 1 buoc thuc hien verify token.
+      const auth = await this.sanctumService.verify(token);
+      this.logger.log(JSON.stringify(auth, null, 4), 'handleConnection -> auth');
+      if (auth) {
+        client.data.isAuthenticated = true;
+        client.data.auth = { id: auth.authId, nickname: auth.nickname, guard: 'ADM' };
+        await this.redisService.initial(client.id);
+      } else {
+        client.data.isAuthenticated = false;
+        client.data.auth = null;
+      }
+    } catch (e) {
+      client.data.isAuthenticated = false;
+      client.data.auth = null;
+    }
   }
 
   public async handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
+    this.logger.log(`Client disconnected: ${client.id}`);
     await this.resourcesService.socketDisconnect(client.id);
     await this.redisService.destroy(client.id);
   }
@@ -78,7 +93,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    */
   @SubscribeMessage('TEST_EVENT')
   public async handleTestEvent(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
-    this.logger.log('TEST_EVENT : ', client.id);
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }), 'TEST_EVENT');
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
       evt: 'TEST_EVENT',
@@ -95,7 +110,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    */
   @SubscribeMessage('SUBSCRIBES_LIVE')
   public async handleRoomSubscribes(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
-    this.logger.log('SUBSCRIBES_LIVE : ', client.id);
+    this.logger.log(JSON.stringify({ clientId: client.id }, null, 2), 'SUBSCRIBES_LIVE');
     const { liveId } = args;
     await this.redisService.sockets(args.liveId, client.id);
     client.join(liveId);
@@ -110,7 +125,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   @SubscribeMessage('AUTH_VERIFIED')
   public async handleAuthVerified(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
-    this.logger.log('AUTH_VERIFIED : ', client.id);
+    this.logger.log(JSON.stringify({ socketId: client.id }, null, 2), 'AUTH_VERIFIED');
     const { liveId } = args;
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
     if (!entity) {
@@ -144,7 +159,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    */
   @SubscribeMessage('LIVE_DETAIL')
   public async handleRoomLiveStatus(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
-    this.logger.log('LIVE_DETAIL : ', { client: client.id, ...args });
+    this.logger.log(JSON.stringify({ client: client.id, ...args }, null, 2), 'LIVE_DETAIL');
     const liveId = args.liveId;
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
     // const room = this.roomService.getRoom(liveId);
@@ -294,7 +309,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   @SubscribeMessage('JOIN_LIVE')
   public async handleJoinLive(@MessageBody() args: JoinChannelDto, @ConnectedSocket() client: Socket) {
-    this.logger.log(`The handle event JOIN_LIVE : `, client.id);
+    this.logger.log(JSON.stringify({ clientId: client.id }, null, 2), `JOIN_LIVE`);
 
     const { liveId, peerId } = args;
 
@@ -405,7 +420,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
       // Thong bao cho tat ca client trong phong liveId co producer moi
       client.to(liveId).emit('NEW_PRODUCER', { producerId, peerId, kind });
-      this.logger.log('EVENT -> NEW_PRODUCER', liveId);
+      this.logger.log(JSON.stringify({ liveId: liveId }, null, 2), 'EVENT -> NEW_PRODUCER');
 
       return { producerId };
     } catch (error) {
@@ -444,7 +459,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   @SubscribeMessage('RESOURCES')
   public async resources(@ConnectedSocket() client: Socket) {
-    console.log('>> RESOURCES >> ', client.id);
+    this.logger.log(JSON.stringify({ clientId: client }, null, 2), 'RESOURCES');
     const workers = Array.from(this.resource?.workers?.entries() ?? []).map(([id, worker]) => {
       return { id, pid: worker.pid, closed: worker.closed };
     });
@@ -479,11 +494,21 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   @SubscribeMessage('CONNECT_TRANSPORT')
   public async handleConnectTransportLive(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    this.logger.log('CONNECT_TRANSPORT ', { ...data, client: client.id });
+    this.logger.log(JSON.stringify({ ...data, client: client.id }, null, 2), 'CONNECT_TRANSPORT');
     // TODO Xu ly connect transport
 
     const transport = this.resource.transports.get(data.transportId);
-    this.logger.log('The transport found is: ', { id: transport.id, appData: transport.appData });
+    this.logger.log(
+      JSON.stringify(
+        {
+          id: transport.id,
+          appData: transport.appData,
+        },
+        null,
+        2,
+      ),
+      'The transport found is',
+    );
     if (!transport) {
       return {
         timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
@@ -495,7 +520,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       };
     }
     await transport.connect({ dtlsParameters: data.dtlsParameters });
-    console.log('>> transport connected', transport.id);
+    this.logger.log(JSON.stringify({ id: transport.id }, null, 2), 'transport connected');
 
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
@@ -530,7 +555,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    */
   @SubscribeMessage('EVT_COMMENTS')
   public async handleComments(@ConnectedSocket() client: Socket, @MessageBody() args: CommentDto): Promise<any> {
-    this.logger.log('EVT_COMMENTS : ', { client: client.id, ...args });
+    this.logger.log(JSON.stringify({ client: client.id, ...args }, null, 2), 'EVT_COMMENTS');
     const comments = await this.redisService.getComments(args.liveId || null, args.cursor ?? undefined);
 
     return {
@@ -548,7 +573,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @ConnectedSocket() client: Socket,
     @MessageBody() args: CreateCommentDto,
   ): Promise<any> {
-    this.logger.log('EVT_COMMENTS_CREATE : ', { clientId: client.id, ...args });
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_COMMENTS_CREATE');
     const score: number = Date.now() * 1000 + Math.floor(Math.random() * 1000);
 
     const object = {
@@ -580,7 +605,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   @SubscribeMessage('EVT_COMMENTS_UPDATE')
   public async handleUpdateComments(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
-    this.logger.log('EVT_COMMENTS_UPDATE : ', { clientId: client.id, ...args });
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_COMMENTS_UPDATE');
 
     this.server.to(args.liveId).emit('EVT_COMMENTS_UPDATED', args);
     return {
@@ -598,7 +623,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @ConnectedSocket() client: Socket,
     @MessageBody() args: CommentDelDto,
   ): Promise<any> {
-    this.logger.log('EVT_COMMENTS_DELETED : ', { clientId: client.id, ...args });
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_COMMENTS_DELETED');
 
     await this.redisService.deleteComment(args.liveId, args.score);
 

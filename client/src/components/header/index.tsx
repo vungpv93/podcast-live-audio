@@ -7,7 +7,7 @@ const Index: React.FC<ILiveAudio> = ({ roomId, socket }: ILiveAudio) => {
       <h1 className="text-base font-bold">
         LiveId : #{roomId || 'NotAvailable '}
       </h1>
-      <span> SocketId: {socket?.id || 'NA'}</span>
+      <span className="text-sm"> SocketId: {socket?.id || 'NA'}</span>
     </header>
   );
 };

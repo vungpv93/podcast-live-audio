@@ -33,6 +33,8 @@ function App({ duuid }: AppProps) {
     } as PageProps;
   }, [socket]);
 
+  if (!socket?.id) return <NotFound />;
+
   return (
     <>
       <Router>

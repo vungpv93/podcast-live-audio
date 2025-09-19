@@ -15,7 +15,16 @@ function ensureBrowserUuid() {
   return browserUuid;
 }
 
+function ensureTokenFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const tk = params.get('tk');
+  if (tk) {
+    Cookies.set('token', tk, { expires: 7, path: window.location.pathname });
+  }
+}
+
 const duuid = ensureBrowserUuid();
+ensureTokenFromQuery();
 
 // StrictMode
 createRoot(document.getElementById('root')!).render(

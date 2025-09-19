@@ -83,6 +83,10 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
     }
   }, [id, location.search, navigate]);
 
+  if (!socket.id) {
+    return <Forbidden />;
+  }
+
   if (!isReady || !liveIsReady) {
     return <LoadingPage />;
   }
