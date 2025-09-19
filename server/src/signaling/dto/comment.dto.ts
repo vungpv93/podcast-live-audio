@@ -1,10 +1,12 @@
 import { IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
 
-export class CreateCommentDto {
+export class ICommentDto {
   @IsNotEmpty()
   @IsString()
   liveId: string;
+}
 
+export class CreateCommentDto extends ICommentDto {
   @IsNotEmpty()
   @IsString()
   content: string;
@@ -13,21 +15,13 @@ export class CreateCommentDto {
 /**
  * Paginate cursor page
  */
-export class CommentDto {
-  @IsNotEmpty()
-  @IsString()
-  liveId: string;
-
+export class CommentDto extends ICommentDto {
   @IsOptional()
   @IsString()
   cursor: string;
 }
 
-export class CommentDelDto {
-  @IsNotEmpty()
-  @IsString()
-  liveId: string;
-
+export class CommentDelDto extends ICommentDto {
   @IsNotEmpty()
   @IsString()
   commentId: string;

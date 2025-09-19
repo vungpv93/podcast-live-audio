@@ -29,6 +29,9 @@ export type IComments = IComment[];
 export function useComment({ roomId, socket }: ILiveAudio) {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [comments, setComments] = useState<IComments>([]);
+  const [pagination, setPagination] = useState<
+    { hasMore: boolean; nextCursor: number } | undefined
+  >();
 
   useEffect(() => {
     console.log('EVT_COMMENTS : ', roomId);
@@ -36,6 +39,13 @@ export function useComment({ roomId, socket }: ILiveAudio) {
       socket?.emit('EVT_COMMENTS', { liveId: roomId }, (response: IResBase) => {
         console.log('EVT_COMMENTS', response);
         const items = (response.data?.comments?.data ?? []) as IComments;
+        setPagination({
+          hasMore: !!(
+            response.data?.comments?.hasMore &&
+            response.data?.comments?.nextCursor
+          ),
+          nextCursor: response.data?.comments?.nextCursor || null,
+        });
         console.log('EVT_COMMENTS', items);
         setComments((prev) => {
           return [...prev, ...items];
@@ -55,6 +65,27 @@ export function useComment({ roomId, socket }: ILiveAudio) {
 
     setIsReady(true);
   }, [roomId, socket, socket?.id]);
+
+  const handleLoadMore: () => Promise<void> = useCallback(async () => {
+    if (socket && socket.id && roomId) {
+      console.log('EVT_COMMENTS_LOAD_MORE', { pagination });
+      socket.emit('EVT_COMMENTS', { liveId: roomId }, (response: IResBase) => {
+        console.log('EVT_COMMENTS', response);
+        const items = (response.data?.comments?.data ?? []) as IComments;
+        setPagination({
+          hasMore: !!(
+            response.data?.comments?.hasMore &&
+            response.data?.comments?.nextCursor
+          ),
+          nextCursor: response.data?.comments?.nextCursor || null,
+        });
+        console.log('EVT_COMMENTS', items);
+        setComments((prev) => {
+          return [...prev, ...items];
+        });
+      });
+    }
+  }, [pagination, roomId, socket]);
 
   const handleAdd: () => Promise<void> = useCallback(async () => {
     if (socket && socket.id && roomId) {
@@ -90,6 +121,8 @@ export function useComment({ roomId, socket }: ILiveAudio) {
     status: true,
     isReady: isReady,
     comments: comments,
+    pagination: pagination,
+    handleLoadMore: handleLoadMore,
     handleAdd: handleAdd,
     handleDel: handleDel,
   };

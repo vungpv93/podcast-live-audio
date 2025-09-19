@@ -25,7 +25,8 @@ import { Inject, Logger } from '@nestjs/common';
 import { MediasoupResource } from '../mediasoup/mediasoup.type';
 import * as moment from 'moment';
 import { v4 as uuidv4 } from 'uuid';
-import { CommentDelDto, CommentDto, CreateCommentDto } from './dto/comment.dto';
+import { CommentDelDto, CommentDto, CreateCommentDto, ICommentDto } from './dto/comment.dto';
+import { MockComments } from '../mock/comments';
 
 @WebSocketGateway({
   cors: {
@@ -576,6 +577,47 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
       evt: 'EVT_COMMENTS_DELETE',
+      status: true,
+      errcd: null,
+      data: null,
+      args: args,
+    };
+  }
+
+  @SubscribeMessage('EVT_FAKER_COMMENTS')
+  public async handleFakerComments(@ConnectedSocket() client: Socket, @MessageBody() args: ICommentDto): Promise<any> {
+    if (args.liveId) {
+      const start = new Date();
+      start.setHours(start.getHours() - 2);
+      const currentTime = new Date(start.getTime());
+
+      for (const comment of MockComments) {
+        const step = Math.floor(Math.random() * (10 - 5 + 1)) + 5;
+        currentTime.setSeconds(currentTime.getSeconds() + step);
+        const createdAtDate = new Date(currentTime.getTime());
+        const score: number = currentTime.getTime() * 1000 + Math.floor(Math.random() * 1000);
+
+        const object = {
+          id: uuidv4(),
+          content: comment,
+          userId: 187,
+          user: {
+            id: 187,
+            nickname: 'VungPV',
+            avatar: 'https://i.pravatar.cc/150?img=3',
+          },
+          status: 1, // 1 | 0
+          createdAt: moment(createdAtDate).format('YYYY-MM-DD HH:mm:ss'),
+          score: score,
+        };
+
+        await this.redisService.storeComment(args.liveId, score, object);
+      }
+    }
+
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'EVT_FAKER_COMMENTS',
       status: true,
       errcd: null,
       data: null,

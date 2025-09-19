@@ -4,7 +4,11 @@ import { type IComment, useComment } from '../../hooks/useComment.ts';
 import { timeAgo } from '../../utils';
 
 const Comments: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
-  const { isReady, comments, handleDel } = useComment({ roomId, socket });
+  const { isReady, comments, pagination, handleLoadMore, handleDel } =
+    useComment({
+      roomId,
+      socket,
+    });
   const [openActionId, setOpenActionId] = useState<IComment | null>(null);
 
   const toggleActionMenu = (comment: IComment) => {
@@ -77,6 +81,13 @@ const Comments: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
               </div>
             </div>
           ))}
+          {pagination?.hasMore ? (
+            <div className="flex justify-center pb-4" onClick={handleLoadMore}>
+              <button className="px-2 py-1 text-sm w-48 mt-2 bg-green-800 hover:bg-green-800 text-white rounded-lg">
+                Xem thêm
+              </button>
+            </div>
+          ) : null}
         </div>
       ) : (
         <div className="flex flex-col items-center justify-center h-full text-gray-400 text-sm">
