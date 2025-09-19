@@ -30,6 +30,8 @@ const Comments: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
             <div
               key={`CommentKey::${comment.id}`}
               className="flex items-start p-2 bg-gray-700 rounded space-x-2"
+              data-cid={comment.id}
+              data-cursor={comment.score}
             >
               <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold flex-shrink-0">
                 {comment.user?.nickname?.charAt(0) ?? 'N'}
@@ -46,7 +48,6 @@ const Comments: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
                   {/*<span className="text-gray-400 text-xs ml-2">2h ago</span>*/}
                 </div>
                 <p className="text-gray-200 text-sm mt-1">{comment.content}</p>
-                {/*<p className="text-gray-200 text-[10px] mt-1">{comment.id}</p>*/}
               </div>
 
               <div className="flex-shrink-0 flex items-center relative">

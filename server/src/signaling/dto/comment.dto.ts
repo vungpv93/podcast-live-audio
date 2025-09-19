@@ -17,8 +17,8 @@ export class CreateCommentDto extends ICommentDto {
  */
 export class CommentDto extends ICommentDto {
   @IsOptional()
-  @IsString()
-  cursor: string;
+  @IsNumber()
+  cursor: number;
 }
 
 export class CommentDelDto extends ICommentDto {

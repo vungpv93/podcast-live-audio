@@ -69,21 +69,32 @@ export function useComment({ roomId, socket }: ILiveAudio) {
   const handleLoadMore: () => Promise<void> = useCallback(async () => {
     if (socket && socket.id && roomId) {
       console.log('EVT_COMMENTS_LOAD_MORE', { pagination });
-      socket.emit('EVT_COMMENTS', { liveId: roomId }, (response: IResBase) => {
-        console.log('EVT_COMMENTS', response);
-        const items = (response.data?.comments?.data ?? []) as IComments;
-        setPagination({
-          hasMore: !!(
-            response.data?.comments?.hasMore &&
-            response.data?.comments?.nextCursor
-          ),
-          nextCursor: response.data?.comments?.nextCursor || null,
-        });
-        console.log('EVT_COMMENTS', items);
-        setComments((prev) => {
-          return [...prev, ...items];
-        });
-      });
+      socket.emit(
+        'EVT_COMMENTS',
+        {
+          liveId: roomId,
+          cursor: pagination?.nextCursor || undefined,
+        },
+        (response: IResBase) => {
+          console.log('EVT_COMMENTS', response);
+          const items = (response.data?.comments?.data ?? []) as IComments;
+          console.log(
+            'The item ....',
+            items.map((c) => c.score),
+          );
+          setPagination({
+            hasMore: !!(
+              response.data?.comments?.hasMore &&
+              response.data?.comments?.nextCursor
+            ),
+            nextCursor: response.data?.comments?.nextCursor || null,
+          });
+          console.log('EVT_COMMENTS', items);
+          setComments((prev) => {
+            return [...prev, ...items];
+          });
+        },
+      );
     }
   }, [pagination, roomId, socket]);
 
