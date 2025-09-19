@@ -109,7 +109,7 @@ export class RedisService {
    * @param liveId
    * @param cursor
    */
-  public async getComments(liveId: string, cursor?: string): Promise<any> {
+  public async getComments(liveId: string, cursor?: number): Promise<any> {
     const limit = 20;
     const max = cursor ? `(${cursor}` : '+inf'; // exclusive nếu có cursor
     const min = '-inf';
