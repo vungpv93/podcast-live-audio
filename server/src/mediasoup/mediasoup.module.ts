@@ -12,11 +12,20 @@ import { mediaCodecs } from './media.config';
 import { SignalingGateway } from '../signaling/signaling.gateway';
 import { SignalingModule } from '../signaling/signaling.module';
 import { MediasoupResource } from './mediasoup.type';
+import { SanctumModule } from './sanctum/sanctum.module';
 
 @Module({
-  imports: [ResourceModule, LiveModule, SignalingModule, RoomModule, TransportModule, ProducerConsumerModule],
+  imports: [
+    ResourceModule,
+    LiveModule,
+    SignalingModule,
+    RoomModule,
+    TransportModule,
+    ProducerConsumerModule,
+    SanctumModule,
+  ],
   providers: [MediasoupService, RedisService],
-  exports: [MediasoupService, RedisService, RoomModule, TransportModule, ProducerConsumerModule],
+  exports: [MediasoupService, RedisService, RoomModule, TransportModule, ProducerConsumerModule, SanctumModule],
 })
 export class MediasoupModule implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(MediasoupModule.name);
