@@ -3,10 +3,14 @@ import { ITransportOptions } from './transport.interface';
 import { Router, WebRtcTransport } from 'mediasoup/node/lib/types';
 import { webRtcTransport_options } from '../media.config';
 import { MediasoupResource } from '../mediasoup.type';
+import { ResourcesService } from '../../resources/resources.service';
 
 @Injectable()
 export class TransportService {
-  constructor(@Inject('RESOURCE') private resource: MediasoupResource) {}
+  constructor(
+    @Inject('RESOURCE') private resource: MediasoupResource,
+    private readonly resourcesService: ResourcesService,
+  ) {}
 
   /**
    * @functionName createWebRtcTransport
@@ -19,7 +23,6 @@ export class TransportService {
     peerId: string,
     direction: 'send' | 'recv',
   ): Promise<ITransportOptions> {
-    console.log(`webRtcTransport_options`, { router, peerId, direction });
     const transport: WebRtcTransport = await router.createWebRtcTransport({
       ...webRtcTransport_options,
       appData: {
@@ -29,6 +32,14 @@ export class TransportService {
     });
 
     this.resource.transports.set(transport.id, transport);
+
+    const socketId = peerId;
+    await this.resourcesService.initial(socketId);
+
+    const temp = this.resource.sockets.get(socketId).transports;
+    if (!temp.includes(transport.id)) {
+      temp.push(transport.id);
+    }
 
     return {
       id: transport.id,

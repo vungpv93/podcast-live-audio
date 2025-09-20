@@ -111,9 +111,9 @@ export function useLive({ roomId, socket }: ILiveAudio) {
           live: true,
           entity: prev?.entity
             ? {
-              ...prev?.entity,
-              status: 'finished',
-            }
+                ...prev?.entity,
+                status: 'finished',
+              }
             : null,
         }));
       });

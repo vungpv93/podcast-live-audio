@@ -2,10 +2,14 @@ import { Inject, Injectable } from '@nestjs/common';
 import { IConsumeParams, IProduceParams } from './producer-consumer.interface';
 import { Consumer, Producer } from 'mediasoup/node/lib/types';
 import { MediasoupResource } from '../mediasoup.type';
+import { ResourcesService } from '../../resources/resources.service';
 
 @Injectable()
 export class ProducerConsumerService {
-  constructor(@Inject('RESOURCE') private resource: MediasoupResource) {}
+  constructor(
+    @Inject('RESOURCE') private resource: MediasoupResource,
+    private readonly resourcesService: ResourcesService,
+  ) {}
 
   /**
    * @functionName createProducer
@@ -24,6 +28,14 @@ export class ProducerConsumerService {
       appData: { transportId: transportData.id, peerId: peerId },
     });
     this.resource.producers.set(producer.id, producer);
+
+    const socketId = peerId;
+    await this.resourcesService.initial(socketId);
+    const temp = this.resource.sockets.get(socketId).producers;
+    if (!temp.includes(producer.id)) {
+      temp.push(producer.id);
+    }
+
     return producer.id;
   }
 
@@ -51,6 +63,13 @@ export class ProducerConsumerService {
     });
 
     this.resource.consumers.set(consumer.id, consumer);
+
+    const socketId = peerId;
+    await this.resourcesService.initial(socketId);
+    const temp = this.resource.sockets.get(socketId).consumers;
+    if (!temp.includes(consumer.id)) {
+      temp.push(consumer.id);
+    }
 
     return {
       id: consumer.id,

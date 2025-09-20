@@ -1,4 +1,10 @@
-import { useRef, useState, useCallback, type RefObject } from 'react';
+import {
+  useRef,
+  useState,
+  useCallback,
+  type RefObject,
+  useEffect,
+} from 'react';
 import * as mediasoupClient from 'mediasoup-client';
 import type { Device, types } from 'mediasoup-client';
 import type { ConsumerKind, ILiveAudio } from '../dto/live-audio.ts';
@@ -99,6 +105,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
                 kind,
                 rtpParameters,
                 roomId,
+                liveId: roomId,
                 peerId: socket.id,
               },
               (producerId: string) => {
@@ -295,6 +302,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
             }
           }
 
+          console.log('Số lượng producer là : ', producers.length);
           for (const producerInfo of producers) {
             await consume(producerInfo);
           }
@@ -307,6 +315,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
       createRecvTransport,
       createSendTransport,
       localStream,
+      consume,
     ]);
 
   const leaveRoom: () => void = useCallback(() => {
@@ -382,6 +391,16 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (socket && socket.id && roomId) {
+      socket.on('NEW_PRODUCER', async (data) => {
+        console.log('NEW_PRODUCER', data);
+        toast.success('Có thêm một người phát live mới');
+        await consume(data);
+      });
+    }
+  }, [consume, roomId, socket]);
 
   return {
     audioStream,
