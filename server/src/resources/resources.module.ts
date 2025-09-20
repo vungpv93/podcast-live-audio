@@ -1,4 +1,5 @@
 import { Global, Module } from '@nestjs/common';
+import { ResourcesService } from './resources.service';
 
 @Global()
 @Module({
@@ -11,6 +12,7 @@ import { Global, Module } from '@nestjs/common';
         transports: new Map(),
         producers: new Map(),
         consumers: new Map(),
+        sockets: new Map<string, { transports: string[]; producers: string[]; consumers: string[] }>(),
         // workers: [],
         // routers: [],
         // consumers: [],
@@ -23,7 +25,8 @@ import { Global, Module } from '@nestjs/common';
         currentWorker: 0,
       },
     },
+    ResourcesService,
   ],
-  exports: ['RESOURCE'],
+  exports: ['RESOURCE', ResourcesService],
 })
 export class ResourceModule {}

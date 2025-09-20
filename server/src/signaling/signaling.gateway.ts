@@ -27,6 +27,7 @@ import * as moment from 'moment';
 import { v4 as uuidv4 } from 'uuid';
 import { CommentDelDto, CommentDto, CreateCommentDto, ICommentDto } from './dto/comment.dto';
 import { MockComments } from '../mock/comments';
+import { ResourcesService } from '../resources/resources.service';
 
 @WebSocketGateway({
   cors: {
@@ -46,13 +47,14 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     private readonly producerConsumerService: ProducerConsumerService,
     @InjectRepository(LiveProgramEntity) private readonly liveProgramRepo: Repository<LiveProgramEntity>,
     @Inject('RESOURCE') private resource: MediasoupResource,
+    private readonly resourcesService: ResourcesService,
   ) {}
 
   afterInit() {
     console.log(`Server initialized`);
   }
 
-  handleConnection(client: Socket) {
+  public async handleConnection(client: Socket): Promise<void> {
     const token =
       (client.handshake.auth?.token as string) ||
       (client.handshake.query?.token as string) ||
@@ -61,12 +63,13 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     // TODO Can 1 buoc thuc hien verify token.
     client.data.auth = { id: 1, nickname: 'VungPV', guard: 'ADM' };
 
-    this.redisService.initial(client.id).then(() => {});
+    await this.redisService.initial(client.id);
   }
 
   public async handleDisconnect(client: Socket) {
     console.log(`Client disconnected: ${client.id}`);
-    this.redisService.destroy(client.id).then(() => {});
+    await this.resourcesService.socketDisconnect(client.id);
+    await this.redisService.destroy(client.id);
   }
 
   /**
@@ -75,14 +78,14 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    */
   @SubscribeMessage('TEST_EVENT')
   public async handleTestEvent(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
-    console.log('TEST_EVENT : ', client.id);
+    this.logger.log('TEST_EVENT : ', client.id);
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
       evt: 'TEST_EVENT',
       status: true,
       errcd: null,
       data: null,
-      args,
+      args: args,
     };
   }
 
@@ -93,8 +96,9 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('SUBSCRIBES_LIVE')
   public async handleRoomSubscribes(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
     this.logger.log('SUBSCRIBES_LIVE : ', client.id);
+    const { liveId } = args;
     await this.redisService.sockets(args.liveId, client.id);
-    client.join(args.roomId);
+    client.join(liveId);
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
       evt: 'SUBSCRIBES_LIVE',
@@ -107,7 +111,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('AUTH_VERIFIED')
   public async handleAuthVerified(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
     this.logger.log('AUTH_VERIFIED : ', client.id);
-    const liveId = args.liveId;
+    const { liveId } = args;
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
     if (!entity) {
       return {
@@ -140,10 +144,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    */
   @SubscribeMessage('LIVE_DETAIL')
   public async handleRoomLiveStatus(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
-    console.log('LIVE_DETAIL : ', {
-      liveId: args.liveId,
-      client: client.id,
-    });
+    this.logger.log('LIVE_DETAIL : ', { client: client.id, ...args });
     const liveId = args.liveId;
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
     // const room = this.roomService.getRoom(liveId);
@@ -254,7 +255,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       const router = this.resource.routers.get(routerId);
       if (router) {
         router.observer.on('close', () => {
-          console.log(`Router ${router.id} closed`);
+          this.logger.log(`Router ${router.id} closed`);
         });
         // Đóng tất cả các transport, producer, consumer trong router
         // const closePromises: Promise<void>[] = [];
@@ -273,7 +274,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
         // Đóng router
         router.close();
         this.resource.routers.delete(routerId);
-        console.log(`Router ${router.id} for live ${liveId} closed and removed from resources`);
+        this.logger.log(`Router ${router.id} for live ${liveId} closed and removed from resources`);
       }
     }
     // TODO Can cap nhat lai Redis #liveId::status: 'ended'
@@ -293,7 +294,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   @SubscribeMessage('JOIN_LIVE')
   public async handleJoinLive(@MessageBody() args: JoinChannelDto, @ConnectedSocket() client: Socket) {
-    console.log(`The handle event JOIN_LIVE : `, client.id);
+    this.logger.log(`The handle event JOIN_LIVE : `, client.id);
 
     const { liveId, peerId } = args;
 
@@ -306,7 +307,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     }
 
     if (!router) {
-      console.error(`Router not found for liveId ${liveId}`);
+      this.logger.error(`Router not found for liveId ${liveId}`);
       return {
         timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
         evt: 'JOIN_LIVE',
@@ -349,6 +350,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   @SubscribeMessage('leave-room')
   public async handleLeaveRoom(@ConnectedSocket() client: Socket) {
+    this.logger.log('leave-room : ', { clientId: client.id });
     // for (const roomId of rooms) {
     //   if (roomId !== client.id) {
     //     const room = this.roomService.getRoom(roomId);
@@ -403,10 +405,11 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
       // Thong bao cho tat ca client trong phong liveId co producer moi
       client.to(liveId).emit('NEW_PRODUCER', { producerId, peerId, kind });
+      this.logger.log('EVENT -> NEW_PRODUCER', liveId);
 
       return { producerId };
     } catch (error) {
-      console.error(error);
+      this.logger.error(error);
       client.emit('produce-error', { error: error.message });
     }
   }
@@ -462,21 +465,25 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       return { id: id, closed: consumer.closed, appData: consumer.appData };
     });
 
+    const sockets = Array.from(this.resource?.sockets?.entries() ?? []).map(([key, data]) => {
+      return { socketId: key, data: data };
+    });
+
     return {
       evt: 'RESOURCES',
       status: true,
       errcd: null,
-      data: { workers, routers, transports, producers, consumers },
+      data: { workers, routers, transports, producers, consumers, sockets },
     };
   }
 
   @SubscribeMessage('CONNECT_TRANSPORT')
   public async handleConnectTransportLive(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
-    console.log('The data is CONNECT_TRANSPORT ', { ...data, client: client.id });
+    this.logger.log('CONNECT_TRANSPORT ', { ...data, client: client.id });
     // TODO Xu ly connect transport
 
     const transport = this.resource.transports.get(data.transportId);
-    console.log('The transport found is: ', transport);
+    this.logger.log('The transport found is: ', { id: transport.id, appData: transport.appData });
     if (!transport) {
       return {
         timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
@@ -523,9 +530,8 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    */
   @SubscribeMessage('EVT_COMMENTS')
   public async handleComments(@ConnectedSocket() client: Socket, @MessageBody() args: CommentDto): Promise<any> {
-    console.log('EVT_COMMENTS : ', client.id, args);
+    this.logger.log('EVT_COMMENTS : ', { client: client.id, ...args });
     const comments = await this.redisService.getComments(args.liveId || null, args.cursor ?? undefined);
-    console.log(`The comments found: `, comments);
 
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
@@ -542,7 +548,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @ConnectedSocket() client: Socket,
     @MessageBody() args: CreateCommentDto,
   ): Promise<any> {
-    console.log('EVT_COMMENTS_CREATE : ', client.id);
+    this.logger.log('EVT_COMMENTS_CREATE : ', { clientId: client.id, ...args });
     const score: number = Date.now() * 1000 + Math.floor(Math.random() * 1000);
 
     const object = {
@@ -574,7 +580,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   @SubscribeMessage('EVT_COMMENTS_UPDATE')
   public async handleUpdateComments(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
-    console.log('EVT_COMMENTS_UPDATE : ', client.id);
+    this.logger.log('EVT_COMMENTS_UPDATE : ', { clientId: client.id, ...args });
 
     this.server.to(args.liveId).emit('EVT_COMMENTS_UPDATED', args);
     return {
@@ -592,10 +598,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @ConnectedSocket() client: Socket,
     @MessageBody() args: CommentDelDto,
   ): Promise<any> {
-    console.log('EVT_COMMENTS_DELETED : ', {
-      clientId: client.id,
-      ...args,
-    });
+    this.logger.log('EVT_COMMENTS_DELETED : ', { clientId: client.id, ...args });
 
     await this.redisService.deleteComment(args.liveId, args.score);
 

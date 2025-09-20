@@ -77,6 +77,7 @@ export type MediasoupResource = {
   transports: Map<string, types.Transport>;
   producers: Map<string, types.Producer>;
   consumers: Map<string, types.Consumer>;
+  sockets: Map<string, { transports: string[]; producers: string[]; consumers: string[] }>;
   // workers: types.Worker<WorkerAppData>[];
   // routers: types.Router<RouterAppData>[];
   // consumers: types.Consumer<ConsumerProducerAppData>[];
