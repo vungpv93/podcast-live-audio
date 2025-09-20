@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import type { ILiveAudio } from '../../dto/live-audio';
 import AudioAnalyzer from '../AudioAnalyzer';
 import { useLiveAudio } from '../../hooks/useLiveAudio';
-import { useMic } from '../../hooks/useMic.ts';
 import { useLive } from '../../hooks/useLive.ts';
 import { HiStatusOffline, HiStatusOnline } from 'react-icons/hi';
 import { HiPlay } from 'react-icons/hi2';
@@ -10,11 +9,12 @@ import { BsMicFill, BsMicMuteFill } from 'react-icons/bs';
 import Volume from '../Volume';
 import { useConfirm } from '../../hooks/useConfirm.tsx';
 import moment from 'moment';
+import { useMic } from '../../context/MicContext.tsx';
 
 const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth, entity }) => {
   console.log('auth is ', auth);
   const [volume, setVolume] = useState<number>(80);
-  const { isMicOn, handleMic, localStream } = useMic();
+  const { isMicOn, localStream } = useMic();
   const { liveData, handleLive, closeLive } = useLive({ roomId, socket });
   const { audioStream, joinRoom } = useLiveAudio({
     roomId,
@@ -125,7 +125,7 @@ const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth, entity }) => {
         <div className="absolute inset-0 flex items-center justify-center">
           <button
             className={`h-24 w-24 rounded-full flex items-center justify-center border-0 focus:outline-none focus:ring-0 hover:bg-none hover:shadow-none hover:outline-none ${isMicOn ? 'bg-red-600' : 'bg-gray-600'}`}
-            onClick={handleMic}
+            // onClick={handleRequestMic}
           >
             {isMicOn ? (
               <BsMicFill className="h-16 w-16 opacity-70" />
