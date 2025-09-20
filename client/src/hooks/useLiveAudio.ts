@@ -284,7 +284,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
 
           // TODO 3.2. Thiet lap Send Transport de nhan Audio
           createRecvTransport(newDevice, recvTransportOptions);
-          toast.success('Thiết lập đường truyền nhan audio thành công');
+          toast.success('Thiết lập đường truyền nhận audio');
 
           // TODO 3.3. Thiet lap Recv Transport de gui Audio
           if (sendTransportOptions) {
@@ -292,7 +292,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
               newDevice,
               sendTransportOptions,
             );
-            toast.success('Thiết lập đường truyền gửi audio thành công');
+            toast.success('Thiết lập đường truyền gửi audio');
 
             // const audioTrack: MediaStreamTrack | undefined = await localAudioStreamAndTrack();
             const audioTrack: MediaStreamTrack | undefined =
