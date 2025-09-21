@@ -30,7 +30,7 @@ function LiveWrapper({ id, socket, auth, liveEntity }: ILiveWrapper) {
   if (isMicOn)
     return (
       <main className="flex flex-1 overflow-hidden">
-        <Participants />
+        <Participants roomId={id || ''} socket={socket} auth={auth} />
         <LiveAudio
           roomId={id || ''}
           socket={socket}

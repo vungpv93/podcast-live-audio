@@ -383,6 +383,14 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     this.logger.log('========================================================================================');
     if (client.data.auth.guard === 'USER' && client.data.auth.id) {
       await this.redisService.join(liveId, client.id, client.data.auth.id);
+      // Thông báo trong liveId có thêm 1 người tham gia mới.
+      const count: number = await this.redisService.countSockets(liveId);
+      const participant = {
+        socketId: client.id,
+        authId: client.data.auth.id,
+        nickname: client.data.auth.nickname,
+      };
+      this.server.to(liveId).emit('PARTICIPANTS_UPDATED', { liveId: liveId, participants: { count, participant } });
     }
     this.logger.log('========================================================================================');
 

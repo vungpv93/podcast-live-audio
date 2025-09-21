@@ -3,12 +3,15 @@ import Redis from 'ioredis';
 import * as moment from 'moment';
 import { Router } from 'mediasoup/node/lib/types';
 import { TTL } from '../constants/app';
+import { InjectRepository } from '@nestjs/typeorm';
+import { UserEntity } from '../entities';
+import { In, Repository } from 'typeorm';
 
 @Injectable()
 export class RedisService {
   private readonly redis: Redis;
 
-  constructor() {
+  constructor(@InjectRepository(UserEntity) private readonly userRepo: Repository<UserEntity>) {
     console.log('REDIS PORT is ', Number(process.env.REDIS_PORT));
     this.redis = new Redis({ host: process.env.REDIS_HOST, port: Number(process.env.REDIS_PORT) });
   }
@@ -20,8 +23,18 @@ export class RedisService {
     await this.redis.zadd(`sockets`, Date.now(), socketId);
   }
 
+  /**
+   * @param socketId
+   */
   public async destroy(socketId: string) {
     await this.redis.zrem(`sockets`, socketId);
+
+    const liveIds: string[] = await this.redis.smembers(`socket:${socketId}:lives`);
+    for (const liveId of liveIds) {
+      await this.redis.del(`live:${liveId}:socket:${socketId}`);
+      await this.redis.zrem(`live:${liveId}:sockets`, socketId);
+    }
+    await this.redis.del(`socket:${socketId}:lives`);
   }
 
   /**
@@ -40,6 +53,7 @@ export class RedisService {
     await this.redis.zadd(`live:${liveId}:sockets`, Date.now(), socketId);
     await this.redis.set(`live:${liveId}:socket:${socketId}`, userId, 'EX', TTL);
     await this.redis.sadd(`live:${liveId}:histories`, userId);
+    await this.redis.sadd(`socket:${socketId}:lives`, liveId);
   }
 
   /**
@@ -174,7 +188,17 @@ export class RedisService {
     return results.filter((r) => r[1] === 1).length;
   }
 
-  public async getSockets(liveId: string, page = 1, pageSize = 50): Promise<{ socketId: string; userId: number }[]> {
+  public async getSockets(
+    liveId: string,
+    page = 1,
+    pageSize = 50,
+  ): Promise<
+    {
+      socketId: string;
+      userId: number;
+      nickname?: string;
+    }[]
+  > {
     const start = (page - 1) * pageSize;
     const stop = start + pageSize - 1;
 
@@ -187,12 +211,23 @@ export class RedisService {
     sockets.forEach((s) => pipeline.get(`live:${liveId}:socket:${s}`));
     const results = await pipeline.exec();
 
-    return sockets
+    const data = sockets
       .map((s, i) => {
         const userId = results[i][1];
         if (!userId) return null;
         return { socketId: s, userId: Number(userId) };
       })
       .filter((item: { socketId: string; userId: number }): boolean => item !== null);
+
+    const userIds: number[] = data.map((item) => item.userId);
+    const users: UserEntity[] = await this.userRepo.find({ where: { id: In(userIds) } });
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    return data.map((item) => ({
+      ...item,
+      nickname: userMap.get(item.userId)?.getNickname() || null,
+    }));
+
+    // return data;
   }
 }

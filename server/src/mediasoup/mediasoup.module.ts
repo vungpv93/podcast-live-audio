@@ -13,9 +13,12 @@ import { SignalingGateway } from '../signaling/signaling.gateway';
 import { SignalingModule } from '../signaling/signaling.module';
 import { MediasoupResource } from './mediasoup.type';
 import { SanctumModule } from './sanctum/sanctum.module';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AdminEntity, UserEntity } from '../entities';
 
 @Module({
   imports: [
+    TypeOrmModule.forFeature([AdminEntity, UserEntity]),
     ResourceModule,
     LiveModule,
     SignalingModule,
