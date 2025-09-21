@@ -26,21 +26,23 @@ export function useAuthVerified({ liveId, socket }: ILiveAudio) {
 
   useEffect(() => {
     if (liveId && socket?.id) {
-      socket.emit(
-        'AUTH_VERIFIED',
-        { liveId: liveId, roomId: liveId },
-        (response: IResponse) => {
-          console.log('AUTH_VERIFIED', response);
-          if (response.data) {
-            setLiveEntity(response.data?.entity as ILiveEntity);
-            setAuthVerified(response.data?.auth as IAuth);
-          } else {
-            setLiveEntity(null);
-            setAuthVerified(null);
-          }
-        },
-      );
-      setIsReady(true);
+      setTimeout(() => {
+        socket.emit(
+          'AUTH_VERIFIED',
+          { liveId: liveId, roomId: liveId },
+          (response: IResponse) => {
+            console.log('AUTH_VERIFIED', response);
+            if (response.data) {
+              setLiveEntity(response.data?.entity as ILiveEntity);
+              setAuthVerified(response.data?.auth as IAuth);
+            } else {
+              setLiveEntity(null);
+              setAuthVerified(null);
+            }
+          },
+        );
+        setIsReady(true);
+      }, 500);
     }
   }, [liveId, socket, socket?.id]);
 

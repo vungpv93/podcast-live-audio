@@ -8,6 +8,8 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import type { Socket } from 'socket.io-client';
 import NotFound from './pages/404';
 import LoadingPage from './components/loading/LoadingPage.tsx';
+import Cookies from 'js-cookie';
+import Forbidden from './pages/403';
 
 type AppProps = {
   duuid: string;
@@ -34,7 +36,11 @@ function App({ duuid }: AppProps) {
     } as PageProps;
   }, [socket]);
 
-  if (typeof socket === 'undefined') return <LoadingPage />;
+  if (!Cookies.get('token')) {
+    return <Forbidden />;
+  }
+
+  if (socket === undefined) return <LoadingPage />;
 
   if (!socket?.id) return <NotFound />;
 
