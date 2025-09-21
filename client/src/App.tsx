@@ -7,6 +7,7 @@ import type { IAuth, IUser } from './dto/live-audio.ts';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import type { Socket } from 'socket.io-client';
 import NotFound from './pages/404';
+import LoadingPage from './components/loading/LoadingPage.tsx';
 
 type AppProps = {
   duuid: string;
@@ -32,6 +33,8 @@ function App({ duuid }: AppProps) {
       auth: AuthList.host as IUser,
     } as PageProps;
   }, [socket]);
+
+  if (typeof socket === 'undefined') return <LoadingPage />;
 
   if (!socket?.id) return <NotFound />;
 

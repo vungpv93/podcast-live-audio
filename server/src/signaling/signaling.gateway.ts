@@ -69,7 +69,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       this.logger.log(JSON.stringify(auth, null, 4), 'handleConnection -> auth');
       if (auth) {
         client.data.isAuthenticated = true;
-        client.data.auth = { id: auth.authId, nickname: auth.nickname, guard: 'ADM' };
+        client.data.auth = { id: auth.authId, nickname: auth.nickname, guard: auth.type };
         await this.redisService.initial(client.id);
       } else {
         client.data.isAuthenticated = false;
@@ -141,13 +141,25 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       };
     }
 
+    this.logger.log(
+      JSON.stringify(
+        {
+          socketId: client.id,
+          auth: client.data.isAuthenticated ? client.data.auth : null,
+          entity: entity,
+        },
+        null,
+        2,
+      ),
+      'AUTH_VERIFIED',
+    );
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
       evt: 'AUTH_VERIFIED',
       status: true,
       errcd: null,
       data: {
-        auth: null, // This is current user entity from mysql database
+        auth: client.data.isAuthenticated ? client.data.auth : null, // This is current user entity from mysql database
         entity: entity, // This is live_programs entity from mysql database
       },
     };

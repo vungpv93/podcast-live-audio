@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Socket } from 'socket.io-client';
 import type { IResBase } from '../dto/socket.ts';
-import type { ILiveEntity } from '../dto/live-audio.ts';
+import type { IAuth, ILiveEntity } from '../dto/live-audio.ts';
 
 interface ILiveAudio {
   liveId: string;
@@ -11,6 +11,7 @@ interface ILiveAudio {
 export interface IResponse extends IResBase {
   data: {
     entity: ILiveEntity | null;
+    auth: IAuth | null;
   };
 }
 
@@ -21,6 +22,8 @@ export function useAuthVerified({ liveId, socket }: ILiveAudio) {
     ILiveEntity | null | undefined
   >();
 
+  const [authVerified, setAuthVerified] = useState<IAuth | null | undefined>();
+
   useEffect(() => {
     if (liveId && socket?.id) {
       socket.emit(
@@ -30,8 +33,10 @@ export function useAuthVerified({ liveId, socket }: ILiveAudio) {
           console.log('AUTH_VERIFIED', response);
           if (response.data) {
             setLiveEntity(response.data?.entity as ILiveEntity);
+            setAuthVerified(response.data?.auth as IAuth);
           } else {
             setLiveEntity(null);
+            setAuthVerified(null);
           }
         },
       );
@@ -43,5 +48,6 @@ export function useAuthVerified({ liveId, socket }: ILiveAudio) {
     status: true,
     isReady: isReady,
     liveEntity: liveEntity,
+    authVerified: authVerified,
   };
 }

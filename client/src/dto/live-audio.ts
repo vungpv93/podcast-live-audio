@@ -10,12 +10,14 @@ export interface ILiveAudio {
   entity?: ILiveEntity;
 }
 
+export type UserGuard = 'ADMIN' | 'USER';
 export type UserRole = 'host' | 'guest';
 
 export interface IUser {
   id: number;
   nickname: string;
-  role: UserRole;
+  guard: UserGuard;
+  role?: UserRole;
 }
 
 export type IAuth = IUser;

@@ -4,7 +4,7 @@ import Participants from '../../components/participants';
 import LiveAudio from '../../components/live-audio';
 import Comments from '../../components/comments';
 import type { Socket } from 'socket.io-client';
-import type { IAuth, ILiveEntity } from '../../dto/live-audio.ts';
+import type { IAuth, ILiveEntity, IUser } from '../../dto/live-audio.ts';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import Forbidden from '../403';
@@ -44,7 +44,7 @@ function LiveWrapper({ id, socket, auth, liveEntity }: ILiveWrapper) {
   return null;
 }
 
-const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
+const Index: React.FC<ILiveAudio> = ({ socket }: ILiveAudio) => {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [authenticated, setAuthenticated] = useState<boolean | undefined>(
     undefined,
@@ -53,7 +53,11 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { liveEntity, isReady: liveIsReady } = useAuthVerified({
+  const {
+    isReady: liveIsReady,
+    liveEntity,
+    authVerified,
+  } = useAuthVerified({
     liveId: id || '',
     socket,
   });
@@ -95,7 +99,7 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
     return <Forbidden />;
   }
 
-  if (liveEntity === null) {
+  if (liveEntity === null && liveIsReady) {
     return <LiveNotFound />;
   }
 
@@ -106,7 +110,11 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
   return (
     <MicProvider>
       <div className="flex flex-col h-screen bg-gray-900 text-white">
-        <Header roomId={id || ''} socket={socket} />
+        <Header
+          roomId={id || ''}
+          socket={socket}
+          auth={authVerified as IUser}
+        />
         {/*<main className="flex flex-1 overflow-hidden">*/}
         {/*  <Participants />*/}
         {/*  <LiveAudio*/}
@@ -120,7 +128,8 @@ const Index: React.FC<ILiveAudio> = ({ socket, auth }: ILiveAudio) => {
         <LiveWrapper
           id={String(id) || ''}
           socket={socket}
-          auth={auth}
+          // auth={auth}
+          auth={authVerified as IUser}
           liveEntity={liveEntity}
         />
       </div>
