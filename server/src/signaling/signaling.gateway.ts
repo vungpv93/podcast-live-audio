@@ -716,4 +716,41 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       args: args,
     };
   }
+
+  /**
+   * =========================================================================
+   *              SocketId, UserId , AdminId trong 1 liveId
+   * =========================================================================
+   */
+  @SubscribeMessage('EVT_GET_SOCKETS')
+  public async handleGetSocketIds(@ConnectedSocket() client: Socket, @MessageBody() args: CommentDelDto): Promise<any> {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_GET_SOCKETS');
+
+    const sockets: { socketId: string; userId: number }[] = await this.redisService.getSockets(args.liveId);
+
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'EVT_GET_SOCKETS',
+      status: true,
+      errcd: null,
+      data: { sockets },
+      args: args,
+    };
+  }
+
+  @SubscribeMessage('EVT_COUNT_SOCKETS')
+  public async handleCountSocket(@ConnectedSocket() client: Socket, @MessageBody() args: CommentDelDto): Promise<any> {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_COUNT_SOCKETS');
+
+    const count: number = await this.redisService.countSockets(args.liveId);
+
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'EVT_COUNT_SOCKETS',
+      status: true,
+      errcd: null,
+      data: { count },
+      args: args,
+    };
+  }
 }

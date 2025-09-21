@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import Redis from 'ioredis';
 import * as moment from 'moment';
 import { Router } from 'mediasoup/node/lib/types';
+import { TTL } from '../constants/app';
 
 @Injectable()
 export class RedisService {
@@ -37,7 +38,7 @@ export class RedisService {
    */
   public async join(liveId: string, socketId: string, userId: number): Promise<void> {
     await this.redis.zadd(`live:${liveId}:sockets`, Date.now(), socketId);
-    await this.redis.set(`live:${liveId}:socket:${socketId}`, userId, 'EX', 60);
+    await this.redis.set(`live:${liveId}:socket:${socketId}`, userId, 'EX', TTL);
     await this.redis.sadd(`live:${liveId}:histories`, userId);
   }
 
@@ -47,7 +48,7 @@ export class RedisService {
    * @param userId
    */
   public async refreshTtl(liveId: string, socketId: string, userId: number): Promise<void> {
-    await this.redis.set(`live:${liveId}:socket:${socketId}`, userId, 'EX', 60);
+    await this.redis.set(`live:${liveId}:socket:${socketId}`, userId, 'EX', TTL);
   }
 
   /**
@@ -158,5 +159,40 @@ export class RedisService {
       nextCursor,
       hasMore: !!nextCursor,
     };
+  }
+
+  /**
+   * ================================================================================
+   *                              #liveId sockets
+   * ================================================================================
+   */
+  public async countSockets(liveId: string) {
+    const sockets: string[] = await this.redis.zrange(`live:${liveId}:sockets`, 0, -1);
+    const pipeline = this.redis.pipeline();
+    sockets.forEach((s) => pipeline.exists(`live:${liveId}:socket:${s}`));
+    const results = await pipeline.exec();
+    return results.filter((r) => r[1] === 1).length;
+  }
+
+  public async getSockets(liveId: string, page = 1, pageSize = 50): Promise<{ socketId: string; userId: number }[]> {
+    const start = (page - 1) * pageSize;
+    const stop = start + pageSize - 1;
+
+    const sockets = await this.redis.zrevrange(`live:${liveId}:sockets`, start, stop);
+    const pipeline = this.redis.pipeline();
+    // sockets.forEach((s) => pipeline.exists(`live:${liveId}:socket:${s}`));
+    // const results = await pipeline.exec();
+    // return sockets.filter((s, i) => results[i][1] === 1);
+
+    sockets.forEach((s) => pipeline.get(`live:${liveId}:socket:${s}`));
+    const results = await pipeline.exec();
+
+    return sockets
+      .map((s, i) => {
+        const userId = results[i][1];
+        if (!userId) return null;
+        return { socketId: s, userId: Number(userId) };
+      })
+      .filter((item: { socketId: string; userId: number }): boolean => item !== null);
   }
 }
