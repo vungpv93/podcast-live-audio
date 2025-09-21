@@ -32,6 +32,26 @@ export class RedisService {
 
   /**
    * @param liveId
+   * @param socketId
+   * @param userId
+   */
+  public async join(liveId: string, socketId: string, userId: number): Promise<void> {
+    await this.redis.zadd(`live:${liveId}:sockets`, Date.now(), socketId);
+    await this.redis.set(`live:${liveId}:socket:${socketId}`, userId, 'EX', 60);
+    await this.redis.sadd(`live:${liveId}:histories`, userId);
+  }
+
+  /**
+   * @param liveId
+   * @param socketId
+   * @param userId
+   */
+  public async refreshTtl(liveId: string, socketId: string, userId: number): Promise<void> {
+    await this.redis.set(`live:${liveId}:socket:${socketId}`, userId, 'EX', 60);
+  }
+
+  /**
+   * @param liveId
    * @param router
    */
   public async beginLive(liveId: string, router: Router): Promise<void> {

@@ -24,6 +24,7 @@ interface ProducerInfo {
 }
 
 export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
+  const pingInterval = useRef<NodeJS.Timeout | null>(null);
   const consumersRef: RefObject<types.Consumer[]> = useRef<types.Consumer[]>(
     [],
   );
@@ -306,6 +307,11 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
           for (const producerInfo of producers) {
             await consume(producerInfo);
           }
+          if (!pingInterval.current) {
+            pingInterval.current = setInterval(() => {
+              socket.emit('PING', { liveId: roomId, roomId: roomId });
+            }, 30 * 1000);
+          }
         },
       );
     }, [
@@ -401,6 +407,12 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
       });
     }
   }, [consume, roomId, socket]);
+
+  useEffect(() => {
+    return () => {
+      if (pingInterval.current) clearInterval(pingInterval.current);
+    };
+  }, []);
 
   return {
     audioStream,

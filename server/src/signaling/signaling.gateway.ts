@@ -108,6 +108,26 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    * @param client
    * @param args
    */
+  @SubscribeMessage('PING')
+  public async handlePing(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }), 'PING');
+    if (client.id && client.data.auth.id && client.data.auth.guard === 'USER') {
+      await this.redisService.refreshTtl(args.liveId, client.id, client.data.auth.id);
+    }
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'PING',
+      status: true,
+      errcd: null,
+      data: null,
+      args: args,
+    };
+  }
+
+  /**
+   * @param client
+   * @param args
+   */
   @SubscribeMessage('SUBSCRIBES_LIVE')
   public async handleRoomSubscribes(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id }, null, 2), 'SUBSCRIBES_LIVE');
@@ -359,6 +379,12 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
         kind: producer.kind,
       });
     }
+
+    this.logger.log('========================================================================================');
+    if (client.data.auth.guard === 'USER' && client.data.auth.id) {
+      await this.redisService.join(liveId, client.id, client.data.auth.id);
+    }
+    this.logger.log('========================================================================================');
 
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
