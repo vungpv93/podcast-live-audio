@@ -17,4 +17,12 @@ export class UserEntity extends AbstractEntity {
 
   @Column({ name: 'email', type: 'varchar', nullable: true })
   email: string;
+
+  public getNickname(): string {
+    const fullName = [this.firstname, this.lastname].filter(Boolean).join(' ').trim();
+    if (fullName) return fullName;
+    if (this.username) return this.username;
+    if (this.email) return this.email;
+    return 'NA';
+  }
 }
