@@ -1,15 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import type { ILiveAudio } from '../../dto/live-audio.ts';
 import { type IComment, useComment } from '../../hooks/useComment.ts';
 import { timeAgo } from '../../utils';
 
 const Comments: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [openActionId, setOpenActionId] = useState<IComment | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<IComment | null>(null);
+
   const { isReady, comments, pagination, handleLoadMore, handleDel } =
     useComment({
       roomId,
       socket,
     });
-  const [openActionId, setOpenActionId] = useState<IComment | null>(null);
 
   const toggleActionMenu = (comment: IComment) => {
     setOpenActionId((prev) => (prev?.id === comment.id ? null : comment));
@@ -19,6 +22,8 @@ const Comments: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
   useEffect(() => {
     console.log(`The comment is `, comments);
   }, [comments]);
+
+  console.log('delete ', confirmDelete);
 
   return (
     <aside className="flex-[2] bg-gray-800 p-4 flex flex-col">
@@ -50,7 +55,10 @@ const Comments: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
                 <p className="text-gray-200 text-sm mt-1">{comment.content}</p>
               </div>
 
-              <div className="flex-shrink-0 flex items-center relative">
+              <div
+                className="flex-shrink-0 flex items-center relative"
+                ref={menuRef}
+              >
                 <span
                   className={'cursor-pointer'}
                   onClick={() => toggleActionMenu(comment)}
@@ -70,8 +78,10 @@ const Comments: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
                     <ul>
                       <li
                         className="px-3 py-2 cursor-pointer text-red-700 font-bold"
-                        onClick={async (): Promise<void> => {
-                          await handleDel(openActionId);
+                        onClick={() => {
+                          console.log('blloo ', openActionId);
+                          setConfirmDelete(openActionId);
+                          setOpenActionId(null);
                         }}
                       >
                         Xóa
@@ -107,6 +117,30 @@ const Comments: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
             />
           </svg>
           Chưa có bình luận nào.
+        </div>
+      )}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-20">
+          <div className="bg-gray-800 p-6 rounded-lg w-80">
+            <h2 className="text-red-500 font-bold mb-4 ">Xác nhận</h2>
+            <p className="text-red-500 mb-6 text-sm">
+              Bạn có chắc chắn muốn xoá bình luận này không?
+            </p>
+            <div className="flex justify-end space-x-2">
+              <button
+                className="px-3 py-1 bg-gray-600 rounded text-white  text-sm"
+                onClick={() => setConfirmDelete(null)}
+              >
+                Huỷ
+              </button>
+              <button
+                className="px-3 py-1 bg-red-600 rounded text-white text-sm"
+                onClick={(): Promise<void> => handleDel(confirmDelete)}
+              >
+                Xoá
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </aside>
