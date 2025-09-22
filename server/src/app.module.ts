@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, OnApplicationBootstrap, OnApplicationShutdown } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
@@ -10,6 +10,10 @@ import { redisStore } from 'cache-manager-redis-store';
 import * as process from 'node:process';
 import * as entities from './entities/index';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { CleanupModule } from './cleanup/cleanup.module';
+import { version } from 'mediasoup';
+import { Router, Worker } from 'mediasoup/node/lib/types';
+import { mediaCodecs } from './mediasoup/media.config';
 
 @Module({
   imports: [
@@ -43,6 +47,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     HttpModule,
     MediasoupModule,
     SignalingModule,
+    CleanupModule,
   ],
   controllers: [AppController],
   providers: [AppService],

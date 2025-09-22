@@ -38,6 +38,15 @@ export class RedisService {
   }
 
   /**
+   * @functionName getAlive
+   * @param socketId
+   */
+  public async getAlive(socketId: string) {
+    const liveIds: string[] = await this.redis.smembers(`socket:${socketId}:lives`);
+    return liveIds;
+  }
+
+  /**
    * @functionName sockets
    */
   public async sockets(liveId: string, socketId: string) {
