@@ -29,6 +29,7 @@ import { CommentDelDto, CommentDto, CreateCommentDto, ICommentDto } from './dto/
 import { MockComments } from '../mock/comments';
 import { ResourcesService } from '../resources/resources.service';
 import { SanctumService } from '../mediasoup/sanctum/sanctum.service';
+import { CleanupService } from '../cleanup/cleanup.service';
 
 @WebSocketGateway({
   cors: {
@@ -51,10 +52,12 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @InjectRepository(PersonalAccessTokensEntity) private readonly tokenRepo: Repository<PersonalAccessTokensEntity>,
     @Inject('RESOURCE') private resource: MediasoupResource,
     private readonly resourcesService: ResourcesService,
+    private readonly cleanupService: CleanupService,
   ) {}
 
   afterInit() {
     this.logger.log(`Server initialized`);
+    this.cleanupService.setServer(this.server);
   }
 
   public async handleConnection(client: Socket) {
@@ -83,8 +86,13 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   public async handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
+    const liveIds: string[] = await this.redisService.getAlive(client.id);
     await this.resourcesService.socketDisconnect(client.id);
     await this.redisService.destroy(client.id);
+    for (const liveId of liveIds) {
+      const count = await this.redisService.countSockets(liveId);
+      this.server.to(liveId).emit('PARTICIPANTS_LEAVE', { liveId: liveId, socketId: client.id, count: count });
+    }
   }
 
   /**

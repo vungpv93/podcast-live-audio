@@ -31,7 +31,7 @@ const Participants: React.FC<ILiveAudio> = ({ roomId, socket }) => {
     <aside className="flex-[1] bg-gray-800 p-4 flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <h2 className="font-semibold mb-2">Participants</h2>
-        <span className="text-sm text-red-500 font-bold">{count ?? 0}</span>
+        <span className="text-sm text-red-500 font-bold">{count ?? 0} Online</span>
       </div>
       <div className="flex-1 overflow-y-auto mb-2 space-y-2">
         {sockets?.length > 0 ? (

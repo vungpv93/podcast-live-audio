@@ -55,6 +55,13 @@ export function useParticipants({ roomId, socket }: ILiveAudio) {
           return [{ ...socket }, ...prev];
         });
       });
+
+      socket.on('PARTICIPANTS_LEAVE', (data) => {
+        console.log('PARTICIPANTS_LEAVE', data);
+        setCount(data.count as number);
+        const socketId: string = data.socketId as string;
+        setSockets((prev) => prev.filter((s) => s.socketId !== socketId));
+      });
       setIsReady(true);
     }
   }, [roomId, socket, socket?.id]);
