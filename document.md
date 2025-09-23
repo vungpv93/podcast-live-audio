@@ -394,5 +394,25 @@ Chỉ tính cho USER ( Không tính ADMIN )
 }
 ```
 
+Client workflow
+```bash
+ - socket.emit SUBSCRIBES_LIVE
+      -> đăng ký nhận thông báo từ liveId
+ - socket.emit LIVE_DETAIL
+      -> lấy thông tin xem phòng live này đã thực sự được open hay chưa ?
+ - socket.emit JOIN_LIVE
+      -> Thực hiện Join vào liveId
+      socket.emit CONNECT_TRANSPORT
+        -> thực hiện connect transport giua client va serv
+      socket.emit EVT_CONSUME
+        -> thực hiện việc tạo consumer để nghe
+
+ Ngoài ra còn lắng nghe thêm các events sau :
+  socket.on NEW_PRODUCER -> có thêm 1 host mới
+  socket.on STARTED_LIVE -> live đang ở trạng thái chưa mở thành mở live.
+  socket.on ENDED_LIVE -> Kết thúc phiên liveId
+```
+
+
 
 
