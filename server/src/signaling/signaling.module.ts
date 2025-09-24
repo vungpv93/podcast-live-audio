@@ -4,11 +4,13 @@ import { MediasoupModule } from '../mediasoup/mediasoup.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LiveProgramEntity, PersonalAccessTokensEntity } from '../entities';
 import { ResourceModule } from '../resources/resources.module';
+import { RecorderModule } from '../mediasoup/recorder/recorder.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([LiveProgramEntity, PersonalAccessTokensEntity]),
     ResourceModule,
+    RecorderModule,
     forwardRef(() => MediasoupModule),
   ],
   providers: [SignalingGateway],

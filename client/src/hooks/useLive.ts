@@ -32,6 +32,7 @@ export interface IResponse extends IResBase {
 
 export type ISubscribesResponse = IResBase;
 export type IStartLiveResponse = IResBase;
+export type IMixTrack = IResBase;
 
 export function useLive({ liveId, socket }: ILiveAudio) {
   const [isReady, setIsReady] = useState<boolean>(false);
@@ -155,11 +156,57 @@ export function useLive({ liveId, socket }: ILiveAudio) {
     }
   }, [liveId, socket]);
 
+  const handleMixTrack: () => Promise<void> = useCallback(async () => {
+    if (liveId && socket?.id) {
+      console.log(`handleMixTrack`);
+      socket.emit('MIX_TRACK', { liveId: liveId }, (response: IMixTrack) => {
+        console.log('MIX_TRACK', response);
+        if (response.status) {
+          toast.success('Mix track các producers.');
+        } else {
+          toast.error('Không thể mix track cho liveId.');
+        }
+      });
+    }
+  }, [liveId, socket]);
+
+  const handleSftp: () => Promise<void> = useCallback(async () => {
+    if (liveId && socket?.id) {
+      console.log(`handleSftp`);
+
+      socket.emit('SFTP_UPLOAD', { liveId: liveId }, (response: IMixTrack) => {
+        console.log('SFTP_UPLOAD', response);
+        if (response.status) {
+          toast.success('Xử lý file âm thành cho liveId');
+        } else {
+          toast.error('Không thể lưu lại được file âm thanh.');
+        }
+      });
+    }
+  }, [liveId, socket]);
+
+  const handleWebhook: () => Promise<void> = useCallback(async () => {
+    if (liveId && socket?.id) {
+      console.log(`handleWebhook`);
+      socket.emit('CALL_WEBHOOK', { liveId: liveId }, (response: IMixTrack) => {
+        console.log('CALL_WEBHOOK', response);
+        if (response.status) {
+          toast.success('Tạo Podcast thành công');
+        } else {
+          toast.error('Không tạo được Podcast.');
+        }
+      });
+    }
+  }, [liveId, socket]);
+
   return {
     status: true,
     isReady: isReady,
     liveData: liveData,
     handleLive: handleLive,
-    closeLive: handleEndLive,
+    handleCloseLive: handleEndLive,
+    handleMixTrack: handleMixTrack,
+    handleSftp: handleSftp,
+    handleWebhook: handleWebhook,
   };
 }
