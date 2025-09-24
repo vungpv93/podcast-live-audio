@@ -15,7 +15,14 @@ const Index: React.FC<ILiveAudio> = ({ liveId, socket, auth, entity }) => {
   console.log('auth is ', auth);
   const [volume, setVolume] = useState<number>(80);
   const { isMicOn, localStream } = useMic();
-  const { liveData, handleLive, closeLive } = useLive({ liveId, socket });
+  const {
+    liveData,
+    handleLive,
+    handleCloseLive,
+    handleMixTrack,
+    handleSftp,
+    handleWebhook,
+  } = useLive({ liveId, socket });
   const { audioStream, joinRoom } = useLiveAudio({
     liveId,
     socket,
@@ -26,30 +33,66 @@ const Index: React.FC<ILiveAudio> = ({ liveId, socket, auth, entity }) => {
     console.log('Live data updated: ', liveData);
   }, [liveData]);
 
-  const { confirm, ConfirmModal } = useConfirm();
+  const { confirm, ConfirmModal, setIsOpen, updateStepStatus } = useConfirm();
   const handleEndLive: () => Promise<void> = async (): Promise<void> => {
     const ok = await confirm(
       'Bạn có chắc muốn kết thúc phiên live podcast này không?',
       {
         title: 'Kết thúc phiên live podcast',
+        steps: [
+          { number: 1, name: 'Step 01: Kết thúc phiên live', status: 0 },
+          { number: 2, name: 'Step 02: Mix track', status: 0 },
+          { number: 3, name: 'Step 03: Upload file recorder', status: 0 },
+          { number: 4, name: 'Step 04: Tạo podcast', status: 0 },
+          { number: 5, name: 'Step 05: Hoàn thành', status: 0 },
+        ],
       },
     );
 
     if (ok) {
       console.log('Đang thực hiện kết thúc phiên live podcast...');
-      // await new Promise((res) => setTimeout(res, 3000));
-      await closeLive();
+
+      updateStepStatus(1, 1);
+      await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
+      await handleCloseLive();
+      console.log('The step 1 is finished');
+      updateStepStatus(1, 2);
+
+      updateStepStatus(2, 1);
+      await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
+      await handleMixTrack();
+      console.log('The step 2 is finished');
+      updateStepStatus(2, 2);
+
+      updateStepStatus(3, 1);
+      await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
+      await handleSftp();
+      console.log('The step 3 is finished');
+      updateStepStatus(3, 2);
+
+      updateStepStatus(4, 1);
+      await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
+      await handleWebhook();
+      console.log('The step 4 is finished');
+      updateStepStatus(4, 2);
+
+      updateStepStatus(5, 1);
+      await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
       console.log('Phiên live podcast đã kết thúc ✅');
+      updateStepStatus(5, 2);
+
+      setIsOpen(false);
     }
   };
 
-  const handleStartLive = async () => {
+  const handleStartLive: () => Promise<void> = async (): Promise<void> => {
     const result = await confirm('Bạn có chắc chắn muốn bắt đầu phiên live?', {
       title: 'Xác nhận bắt đầu',
     });
 
     if (result) {
       await handleLive();
+      setIsOpen(false);
     }
   };
 

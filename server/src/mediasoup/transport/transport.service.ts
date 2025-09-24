@@ -15,17 +15,20 @@ export class TransportService {
   /**
    * @functionName createWebRtcTransport
    * @param router
+   * @param liveId
    * @param peerId
    * @param direction
    */
   public async createWebRtcTransport(
     router: Router,
+    liveId: string,
     peerId: string,
     direction: 'send' | 'recv',
   ): Promise<ITransportOptions> {
     const transport: WebRtcTransport = await router.createWebRtcTransport({
       ...webRtcTransport_options,
       appData: {
+        liveId: liveId,
         peerId,
         direction: direction,
       },

@@ -6,6 +6,7 @@ import { TTL } from '../constants/app';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from '../entities';
 import { In, Repository } from 'typeorm';
+import { IRecorder, IRecorders } from './recorder/IRecorder.interface';
 
 @Injectable()
 export class RedisService {
@@ -139,6 +140,28 @@ export class RedisService {
   public async getLivesRestore(): Promise<string[]> {
     const keys = await this.redis.keys('live:*:status');
     return keys.map((key) => key.split(':')[1]);
+  }
+
+  /**
+   * ================================================================================
+   *                              #liveId producer
+   * ================================================================================
+   */
+  public async recorder(liveId: string, producerId: string): Promise<void> {
+    await this.redis.zadd(`live:${liveId}:recorders`, Date.now(), producerId);
+  }
+
+  public async recorders(liveId: string): Promise<IRecorders> {
+    const redis = await this.redis.zrevrange(`live:${liveId}:recorders`, 0, -1, 'WITHSCORES');
+    const producers: { producerId: string; joinedAt: number }[] = [];
+    for (let i = 0; i < redis.length; i += 2) {
+      producers.push({
+        producerId: redis[i],
+        joinedAt: Number(redis[i + 1]),
+      });
+    }
+
+    return producers;
   }
 
   /**

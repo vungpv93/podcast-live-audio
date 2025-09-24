@@ -41,6 +41,7 @@ import { ResourcesService } from '../resources/resources.service';
 import { SanctumService } from '../mediasoup/sanctum/sanctum.service';
 import { CleanupService } from '../cleanup/cleanup.service';
 import { LiveProgramStatus } from '../enums/live-program-status';
+import { RecorderService } from '../mediasoup/recorder/recorder.service';
 
 @WebSocketGateway({
   cors: {
@@ -64,6 +65,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @Inject('RESOURCE') private resource: MediasoupResource,
     private readonly resourcesService: ResourcesService,
     private readonly cleanupService: CleanupService,
+    private readonly recorderService: RecorderService,
   ) {}
 
   afterInit() {
@@ -332,26 +334,11 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     const liveRedis = await this.redisService.getLive(liveId);
     const routerId = liveRedis?.routerId;
     if (routerId) {
-      const router = this.resource.routers.get(routerId);
+      const router: Router = this.resource.routers.get(routerId);
       if (router) {
         router.observer.on('close', () => {
           this.logger.log(`Router ${router.id} closed`);
         });
-        // Đóng tất cả các transport, producer, consumer trong router
-        // const closePromises: Promise<void>[] = [];
-        // for (const transport of router.transports) {
-        //   closePromises.push(
-        //     (async () => {
-        //       transport[1].observer.on('close', () => {
-        //         console.log(`Transport ${transport[0]} closed`);
-        //       });
-        //       transport[1].close();
-        //     })(),
-        //   );
-        // }
-        // await Promise.all(closePromises);
-
-        // Đóng router
         router.close();
         this.resource.routers.delete(routerId);
         this.logger.log(`Router ${router.id} for live ${liveId} closed and removed from resources`);
@@ -402,8 +389,8 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       };
     }
 
-    const sendTransportOptions = await this.transportService.createWebRtcTransport(router, peerId, 'send');
-    const recvTransportOptions = await this.transportService.createWebRtcTransport(router, peerId, 'recv');
+    const sendTransportOptions = await this.transportService.createWebRtcTransport(router, liveId, peerId, 'send');
+    const recvTransportOptions = await this.transportService.createWebRtcTransport(router, liveId, peerId, 'recv');
 
     const producers = [];
     for (const producer of this.resource.producers.values()) {
@@ -802,6 +789,48 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       status: true,
       errcd: null,
       data: { count },
+      args: args,
+    };
+  }
+
+  @SubscribeMessage('MIX_TRACK')
+  public async handleMixTrack(@ConnectedSocket() client: Socket, @MessageBody() args: ILiveBaseDto): Promise<any> {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'MIX_TRACK');
+    await this.recorderService.mixTracks(args.liveId);
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'MIX_TRACK',
+      status: true,
+      errcd: null,
+      data: null,
+      args: args,
+    };
+  }
+
+  @SubscribeMessage('SFTP_UPLOAD')
+  public async handleSftpUpload(@ConnectedSocket() client: Socket, @MessageBody() args: ILiveBaseDto): Promise<any> {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'SFTP_UPLOAD');
+    await this.recorderService.uploadSftp(args.liveId);
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'SFTP_UPLOAD',
+      status: true,
+      errcd: null,
+      data: null,
+      args: args,
+    };
+  }
+
+  @SubscribeMessage('CALL_WEBHOOK')
+  public async handleCallWebhook(@ConnectedSocket() client: Socket, @MessageBody() args: ILiveBaseDto): Promise<any> {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'CALL_WEBHOOK');
+    await this.recorderService.webhook(args.liveId);
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'CALL_WEBHOOK',
+      status: true,
+      errcd: null,
+      data: null,
       args: args,
     };
   }

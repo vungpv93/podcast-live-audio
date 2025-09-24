@@ -15,12 +15,14 @@ import { MediasoupResource } from './mediasoup.type';
 import { SanctumModule } from './sanctum/sanctum.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AdminEntity, UserEntity } from '../entities';
+import { RecorderModule } from "./recorder/recorder.module";
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([AdminEntity, UserEntity]),
     ResourceModule,
     LiveModule,
+    RecorderModule,
     SignalingModule,
     RoomModule,
     TransportModule,
