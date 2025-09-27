@@ -445,6 +445,13 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('LEAVE')
   public async handleLeaveRoom(@ConnectedSocket() client: Socket, @MessageBody() args: LeaveDto) {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), `LEAVE`);
+    const liveIds: string[] = await this.redisService.getAlive(client.id);
+    await this.resourcesService.socketDisconnect(client.id);
+    await this.redisService.destroy(client.id);
+    for (const liveId of liveIds) {
+      const count = await this.redisService.countSockets(liveId);
+      this.server.to(liveId).emit('PARTICIPANTS_LEAVE', { liveId: liveId, socketId: client.id, count: count });
+    }
     // for (const roomId of rooms) {
     //   if (roomId !== client.id) {
     //     const room = this.roomService.getRoom(roomId);
