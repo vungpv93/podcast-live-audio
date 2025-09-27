@@ -19,25 +19,25 @@ interface ILiveAudio {
 }
 
 interface ILiveWrapper {
-  id: string;
+  liveId: string;
   socket: Socket;
   auth: IAuth;
   liveEntity: ILiveEntity | undefined;
 }
 
-function LiveWrapper({ id, socket, auth, liveEntity }: ILiveWrapper) {
+function LiveWrapper({ liveId, socket, auth, liveEntity }: ILiveWrapper) {
   const { isMicOn } = useMic();
   if (isMicOn)
     return (
       <main className="flex flex-1 overflow-hidden">
-        <Participants roomId={id || ''} socket={socket} auth={auth} />
+        <Participants liveId={liveId || ''} socket={socket} auth={auth} />
         <LiveAudio
-          roomId={id || ''}
+          liveId={liveId || ''}
           socket={socket}
           auth={auth}
           entity={liveEntity}
         />
-        <Comments roomId={id || ''} socket={socket} auth={auth} />
+        <Comments liveId={liveId || ''} socket={socket} auth={auth} />
       </main>
     );
 
@@ -49,7 +49,7 @@ const Index: React.FC<ILiveAudio> = ({ socket }: ILiveAudio) => {
   const [authenticated, setAuthenticated] = useState<boolean | undefined>(
     undefined,
   );
-  const { id } = useParams<{ id: string }>();
+  const { id: liveId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -58,7 +58,7 @@ const Index: React.FC<ILiveAudio> = ({ socket }: ILiveAudio) => {
     liveEntity,
     authVerified,
   } = useAuthVerified({
-    liveId: id || '',
+    liveId: liveId || '',
     socket,
   });
 
@@ -68,11 +68,11 @@ const Index: React.FC<ILiveAudio> = ({ socket }: ILiveAudio) => {
 
     if (token) {
       Cookies.set('token', token, {
-        path: `/live/${id}`,
+        path: `/live/${liveId}`,
         secure: false,
         sameSite: 'strict',
       });
-      navigate(`/live/${id}`, { replace: true });
+      navigate(`/live/${liveId}`, { replace: true });
       setIsReady(true);
       return;
     } else {
@@ -85,7 +85,7 @@ const Index: React.FC<ILiveAudio> = ({ socket }: ILiveAudio) => {
       }
       setIsReady(true);
     }
-  }, [id, location.search, navigate]);
+  }, [liveId, location.search, navigate]);
 
   if (!socket.id) {
     return <Forbidden />;
@@ -111,24 +111,13 @@ const Index: React.FC<ILiveAudio> = ({ socket }: ILiveAudio) => {
     <MicProvider>
       <div className="flex flex-col h-screen bg-gray-900 text-white">
         <Header
-          roomId={id || ''}
+          liveId={liveId || ''}
           socket={socket}
           auth={authVerified as IUser}
         />
-        {/*<main className="flex flex-1 overflow-hidden">*/}
-        {/*  <Participants />*/}
-        {/*  <LiveAudio*/}
-        {/*    roomId={id || ''}*/}
-        {/*    socket={socket}*/}
-        {/*    auth={auth}*/}
-        {/*    entity={liveEntity}*/}
-        {/*  />*/}
-        {/*  <Comments roomId={id || ''} socket={socket} auth={auth} />*/}
-        {/*</main>*/}
         <LiveWrapper
-          id={String(id) || ''}
+          liveId={String(liveId) || ''}
           socket={socket}
-          // auth={auth}
           auth={authVerified as IUser}
           liveEntity={liveEntity}
         />

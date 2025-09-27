@@ -23,7 +23,7 @@ interface ProducerInfo {
   kind: ConsumerKind;
 }
 
-export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
+export function useLiveAudio({ liveId, socket, localStream }: ILiveAudio) {
   const pingInterval = useRef<NodeJS.Timeout | null>(null);
   const consumersRef: RefObject<types.Consumer[]> = useRef<types.Consumer[]>(
     [],
@@ -77,7 +77,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
             socket.emit('CONNECT_TRANSPORT', {
               transportId: newSendTransport.id,
               dtlsParameters,
-              roomId,
+              liveId,
               peerId: socket.id,
             });
             callback();
@@ -105,8 +105,8 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
                 transportId: newSendTransport.id,
                 kind,
                 rtpParameters,
-                roomId,
-                liveId: roomId,
+                roomId: liveId,
+                liveId: liveId,
                 peerId: socket.id,
               },
               (producerId: string) => {
@@ -121,7 +121,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
 
       return newSendTransport;
     },
-    [roomId, socket],
+    [liveId, socket],
   );
 
   const createRecvTransport: (
@@ -144,22 +144,17 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
       newRecvTransport.on(
         'connect',
         ({ dtlsParameters }, callback, errback) => {
+          const body = {
+            roomId: liveId,
+            liveId: liveId,
+            transportId: newRecvTransport.id,
+            dtlsParameters,
+            peerId: socket.id,
+          };
           try {
-            console.log(`The event emit socket is CONNECT_TRANSPORT`, {
-              roomId: roomId,
-              liveId: roomId,
-              transportId: newRecvTransport.id,
-              dtlsParameters,
-              peerId: socket.id,
-            });
+            console.log(`The event emit socket is CONNECT_TRANSPORT`, body);
             // connect-transport | CONNECT_TRANSPORT
-            socket.emit('CONNECT_TRANSPORT', {
-              roomId: roomId,
-              liveId: roomId,
-              transportId: newRecvTransport.id,
-              dtlsParameters,
-              peerId: socket.id,
-            });
+            socket.emit('CONNECT_TRANSPORT', { ...body });
             callback();
           } catch (error) {
             errback(error as Error);
@@ -170,7 +165,7 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
       recvTransportRef.current = newRecvTransport;
       return newRecvTransport;
     },
-    [roomId, socket],
+    [liveId, socket],
   );
 
   const consume: ({ producerId }: ProducerInfo) => Promise<void> = useCallback(
@@ -185,8 +180,8 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
         {
           transportId: recvTransport.id,
           producerId,
-          roomId,
-          liveId: roomId,
+          roomId: liveId,
+          liveId: liveId,
           peerId: socket.id,
           rtpCapabilities: device.rtpCapabilities,
         },
@@ -236,24 +231,24 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
         },
       );
     },
-    [roomId, socket],
+    [liveId, socket],
   );
 
   const handleJoinLive: () => Promise<void> =
     useCallback(async (): Promise<void> => {
-      if (!socket || !roomId) {
+      if (!socket || !liveId) {
         console.error(`No socket or liveId`);
         toast.error('No socket or liveId');
         return;
       }
       console.info(`The handleJoinLive function is `, {
         socket_id: socket.id,
-        liveId: roomId,
+        liveId: liveId,
       });
 
       socket.emit(
         `JOIN_LIVE`,
-        { liveId: roomId, roomId, peerId: socket.id },
+        { liveId: liveId, peerId: socket.id },
         async (response: {
           errcd?: string;
           data: {
@@ -309,14 +304,14 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
           }
           if (!pingInterval.current) {
             pingInterval.current = setInterval(() => {
-              socket.emit('PING', { liveId: roomId, roomId: roomId });
+              socket.emit('PING', { liveId: liveId });
             }, 30 * 1000);
           }
         },
       );
     }, [
       socket,
-      roomId,
+      liveId,
       createDevice,
       createRecvTransport,
       createSendTransport,
@@ -399,14 +394,14 @@ export function useLiveAudio({ roomId, socket, localStream }: ILiveAudio) {
   }, []);
 
   useEffect(() => {
-    if (socket && socket.id && roomId) {
+    if (socket && socket.id && liveId) {
       socket.on('NEW_PRODUCER', async (data) => {
         console.log('NEW_PRODUCER', data);
         toast.success('Có thêm một người phát live mới');
         await consume(data);
       });
     }
-  }, [consume, roomId, socket]);
+  }, [consume, liveId, socket]);
 
   useEffect(() => {
     return () => {
