@@ -12,7 +12,17 @@ import { Server, Socket } from 'socket.io';
 import { JoinChannelDto } from './dto/join-channel.dto';
 import { TransportService } from 'src/mediasoup/transport/transport.service';
 import { ProducerConsumerService } from 'src/mediasoup/producer-consumer/producer-consumer.service';
-import { LiveDto } from './dto/live.dto';
+import {
+  AuthVerifiedDto,
+  BeginLiveDto,
+  EndLiveDto,
+  ILiveBaseDto,
+  LeaveDto,
+  LiveDetailDto,
+  LiveDto,
+  LivePingDto,
+  SubscribesDto,
+} from './dto/live.dto';
 import { RedisService } from '../mediasoup/redis.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LiveProgramEntity, PersonalAccessTokensEntity } from '../entities';
@@ -25,11 +35,12 @@ import { Inject, Logger } from '@nestjs/common';
 import { MediasoupResource } from '../mediasoup/mediasoup.type';
 import * as moment from 'moment';
 import { v4 as uuidv4 } from 'uuid';
-import { CommentDelDto, CommentDto, CreateCommentDto, ICommentDto } from './dto/comment.dto';
+import { CommentDelDto, CommentDto, CreateCommentDto, FakerCommentDto } from './dto/comment.dto';
 import { MockComments } from '../mock/comments';
 import { ResourcesService } from '../resources/resources.service';
 import { SanctumService } from '../mediasoup/sanctum/sanctum.service';
 import { CleanupService } from '../cleanup/cleanup.service';
+import { LiveProgramStatus } from '../enums/live-program-status';
 
 @WebSocketGateway({
   cors: {
@@ -117,7 +128,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    * @param args
    */
   @SubscribeMessage('PING')
-  public async handlePing(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
+  public async handlePing(@ConnectedSocket() client: Socket, @MessageBody() args: LivePingDto): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }), 'PING');
     if (client.id && client.data.auth.id && client.data.auth.guard === 'USER') {
       await this.redisService.refreshTtl(args.liveId, client.id, client.data.auth.id);
@@ -137,7 +148,10 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    * @param args
    */
   @SubscribeMessage('SUBSCRIBES_LIVE')
-  public async handleRoomSubscribes(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+  public async handleRoomSubscribes(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() args: SubscribesDto,
+  ): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id }, null, 2), 'SUBSCRIBES_LIVE');
     const { liveId } = args;
     await this.redisService.sockets(args.liveId, client.id);
@@ -152,7 +166,10 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   @SubscribeMessage('AUTH_VERIFIED')
-  public async handleAuthVerified(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+  public async handleAuthVerified(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() args: AuthVerifiedDto,
+  ): Promise<any> {
     this.logger.log(JSON.stringify({ socketId: client.id }, null, 2), 'AUTH_VERIFIED');
     const { liveId } = args;
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
@@ -198,9 +215,12 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    * @param args
    */
   @SubscribeMessage('LIVE_DETAIL')
-  public async handleRoomLiveStatus(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+  public async handleRoomLiveStatus(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() args: LiveDetailDto,
+  ): Promise<any> {
     this.logger.log(JSON.stringify({ client: client.id, ...args }, null, 2), 'LIVE_DETAIL');
-    const liveId = args.liveId;
+    const { liveId } = args;
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
     // const room = this.roomService.getRoom(liveId);
     const liveRedis = await this.redisService.getLive(liveId);
@@ -238,7 +258,8 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    * 6. Tra ve ket qua
    */
   @SubscribeMessage('BEGIN_LIVE')
-  public async handleRoomBeginLive(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+  public async handleRoomBeginLive(@ConnectedSocket() client: Socket, @MessageBody() args: BeginLiveDto): Promise<any> {
+    this.logger.log(JSON.stringify({ client: client.id, ...args }, null, 2), 'BEGIN_LIVE');
     const { liveId } = args;
 
     // 1. Kiểm tra trạng thái live trong Redis trước
@@ -254,7 +275,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       };
     }
 
-    if (entity.status === 'finished') {
+    if (entity.status === LiveProgramStatus.Finished) {
       return {
         timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
         evt: 'BEGIN_LIVE',
@@ -279,7 +300,10 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     this.resource.routers.set(router.id, router);
 
     // 3. Cap nhat trang thai live trong db
-    if (entity) await this.liveProgramRepo.update(entity.id, { status: 'ongoing' });
+    if (entity) {
+      const liveAt = moment().format('YYYY-MM-DD HH:mm:ss');
+      await this.liveProgramRepo.update(entity.id, { status: LiveProgramStatus.Ongoing, live_at: liveAt });
+    }
 
     // 4. Luu trang thai live trong redis
     await this.redisService.beginLive(liveId, router);
@@ -299,10 +323,11 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   @SubscribeMessage('END_LIVE')
-  public async handleLiveEnded(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
+  public async handleLiveEnded(@ConnectedSocket() client: Socket, @MessageBody() args: EndLiveDto): Promise<any> {
+    this.logger.log(JSON.stringify({ client: client.id, ...args }, null, 2), 'END_LIVE');
     const { liveId } = args;
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
-    if (entity) await this.liveProgramRepo.update(entity.id, { status: 'finished' });
+    if (entity) await this.liveProgramRepo.update(entity.id, { status: LiveProgramStatus.Finished });
 
     const liveRedis = await this.redisService.getLive(liveId);
     const routerId = liveRedis?.routerId;
@@ -417,9 +442,9 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     };
   }
 
-  @SubscribeMessage('leave-room')
-  public async handleLeaveRoom(@ConnectedSocket() client: Socket) {
-    this.logger.log('leave-room : ', { clientId: client.id });
+  @SubscribeMessage('LEAVE')
+  public async handleLeaveRoom(@ConnectedSocket() client: Socket, @MessageBody() args: LeaveDto) {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), `LEAVE`);
     // for (const roomId of rooms) {
     //   if (roomId !== client.id) {
     //     const room = this.roomService.getRoom(roomId);
@@ -693,7 +718,11 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   @SubscribeMessage('EVT_FAKER_COMMENTS')
-  public async handleFakerComments(@ConnectedSocket() client: Socket, @MessageBody() args: ICommentDto): Promise<any> {
+  public async handleFakerComments(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() args: FakerCommentDto,
+  ): Promise<any> {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_FAKER_COMMENTS');
     if (args.liveId) {
       const start = new Date();
       start.setHours(start.getHours() - 2);
@@ -739,7 +768,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    * =========================================================================
    */
   @SubscribeMessage('EVT_GET_SOCKETS')
-  public async handleGetSocketIds(@ConnectedSocket() client: Socket, @MessageBody() args: CommentDelDto): Promise<any> {
+  public async handleGetSocketIds(@ConnectedSocket() client: Socket, @MessageBody() args: ILiveBaseDto): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_GET_SOCKETS');
 
     const sockets: { socketId: string; userId: number }[] = await this.redisService.getSockets(args.liveId);
@@ -755,7 +784,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   }
 
   @SubscribeMessage('EVT_COUNT_SOCKETS')
-  public async handleCountSocket(@ConnectedSocket() client: Socket, @MessageBody() args: CommentDelDto): Promise<any> {
+  public async handleCountSocket(@ConnectedSocket() client: Socket, @MessageBody() args: ILiveBaseDto): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_COUNT_SOCKETS');
 
     const count: number = await this.redisService.countSockets(args.liveId);

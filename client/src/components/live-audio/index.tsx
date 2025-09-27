@@ -11,13 +11,13 @@ import { useConfirm } from '../../hooks/useConfirm.tsx';
 import moment from 'moment';
 import { useMic } from '../../context/MicContext.tsx';
 
-const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth, entity }) => {
+const Index: React.FC<ILiveAudio> = ({ liveId, socket, auth, entity }) => {
   console.log('auth is ', auth);
   const [volume, setVolume] = useState<number>(80);
   const { isMicOn, localStream } = useMic();
-  const { liveData, handleLive, closeLive } = useLive({ roomId, socket });
+  const { liveData, handleLive, closeLive } = useLive({ liveId, socket });
   const { audioStream, joinRoom } = useLiveAudio({
-    roomId,
+    liveId,
     socket,
     localStream,
   });
@@ -55,11 +55,11 @@ const Index: React.FC<ILiveAudio> = ({ roomId, socket, auth, entity }) => {
 
   useEffect(() => {
     console.log('DEBUG : Live Audio');
-    if (socket?.id && roomId && liveData.live)
+    if (socket?.id && liveId && liveData.live)
       joinRoom()
         .then((response) => console.log(`AUTO JOIN_LIVE `, response))
         .catch((err) => console.error('AUTO JOIN_LIVE:', err));
-  }, [socket, roomId, liveData.live, joinRoom]);
+  }, [socket, liveId, liveData.live, joinRoom]);
 
   const isDisabled = useMemo(() => {
     return !liveData?.entity?.status || liveData?.entity?.status === 'finished';

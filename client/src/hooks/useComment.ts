@@ -4,7 +4,7 @@ import type { IResBase } from '../dto/socket.ts';
 import toast from 'react-hot-toast';
 
 interface ILiveAudio {
-  roomId: string;
+  liveId: string;
   socket?: Socket;
 }
 
@@ -26,7 +26,7 @@ export interface IUser {
 
 export type IComments = IComment[];
 
-export function useComment({ roomId, socket }: ILiveAudio) {
+export function useComment({ liveId, socket }: ILiveAudio) {
   const [isReady, setIsReady] = useState<boolean>(false);
   const [comments, setComments] = useState<IComments>([]);
   const [pagination, setPagination] = useState<
@@ -34,9 +34,9 @@ export function useComment({ roomId, socket }: ILiveAudio) {
   >();
 
   useEffect(() => {
-    console.log('EVT_COMMENTS : ', roomId);
-    if (socket?.id && roomId) {
-      socket?.emit('EVT_COMMENTS', { liveId: roomId }, (response: IResBase) => {
+    console.log('EVT_COMMENTS : ', liveId);
+    if (socket?.id && liveId) {
+      socket?.emit('EVT_COMMENTS', { liveId: liveId }, (response: IResBase) => {
         console.log('EVT_COMMENTS', response);
         const items = (response.data?.comments?.data ?? []) as IComments;
         setPagination({
@@ -64,15 +64,15 @@ export function useComment({ roomId, socket }: ILiveAudio) {
     }
 
     setIsReady(true);
-  }, [roomId, socket, socket?.id]);
+  }, [liveId, socket, socket?.id]);
 
   const handleLoadMore: () => Promise<void> = useCallback(async () => {
-    if (socket && socket.id && roomId) {
+    if (socket && socket.id && liveId) {
       console.log('EVT_COMMENTS_LOAD_MORE', { pagination });
       socket.emit(
         'EVT_COMMENTS',
         {
-          liveId: roomId,
+          liveId: liveId,
           cursor: pagination?.nextCursor || undefined,
         },
         (response: IResBase) => {
@@ -96,25 +96,25 @@ export function useComment({ roomId, socket }: ILiveAudio) {
         },
       );
     }
-  }, [pagination, roomId, socket]);
+  }, [pagination, liveId, socket]);
 
   const handleAdd: () => Promise<void> = useCallback(async () => {
-    if (socket && socket.id && roomId) {
-      console.log('EVT_COMMENTS_CREATE', roomId);
+    if (socket && socket.id && liveId) {
+      console.log('EVT_COMMENTS_CREATE', liveId);
     }
-  }, [roomId, socket]);
+  }, [liveId, socket]);
 
   const handleDel: (comment: IComment) => Promise<void> = useCallback(
     async (comment: IComment): Promise<void> => {
-      if (socket && socket.id && roomId) {
+      if (socket && socket.id && liveId) {
         console.log('EVT_COMMENTS_DELETE', {
-          liveId: roomId,
+          liveId: liveId,
           commentId: comment.id,
           score: comment.score,
         });
         socket.emit(
           'EVT_COMMENTS_DELETE',
-          { liveId: roomId, commentId: comment.id, score: comment.score },
+          { liveId: liveId, commentId: comment.id, score: comment.score },
           (response: IResBase) => {
             if (response.status) {
               toast.success('Bình luận này đã bị loại bỏ');
@@ -125,7 +125,7 @@ export function useComment({ roomId, socket }: ILiveAudio) {
         );
       }
     },
-    [roomId, socket],
+    [liveId, socket],
   );
 
   return {

@@ -3,14 +3,14 @@ import type { ILiveAudio } from '../../dto/live-audio.ts';
 import { type IComment, useComment } from '../../hooks/useComment.ts';
 import { timeAgo } from '../../utils';
 
-const Comments: React.FC<ILiveAudio> = ({ roomId, socket, auth }) => {
+const Comments: React.FC<ILiveAudio> = ({ liveId, socket, auth }) => {
   const menuRef = useRef<HTMLDivElement>(null);
   const [openActionId, setOpenActionId] = useState<IComment | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<IComment | null>(null);
 
   const { isReady, comments, pagination, handleLoadMore, handleDel } =
     useComment({
-      roomId,
+      liveId,
       socket,
     });
 

@@ -5,7 +5,7 @@ import type { IResBase } from '../dto/socket.ts';
 import type { IRtpCapabilities } from '../dto/mediasoup.ts';
 
 interface ILiveAudio {
-  roomId: string;
+  liveId: string;
   socket?: Socket;
 }
 
@@ -33,7 +33,7 @@ export interface IResponse extends IResBase {
 export type ISubscribesResponse = IResBase;
 export type IStartLiveResponse = IResBase;
 
-export function useLive({ roomId, socket }: ILiveAudio) {
+export function useLive({ liveId, socket }: ILiveAudio) {
   const [isReady, setIsReady] = useState<boolean>(false);
 
   const [liveData, setLiveData] = useState<{
@@ -47,10 +47,10 @@ export function useLive({ roomId, socket }: ILiveAudio) {
   });
 
   useEffect(() => {
-    if (roomId && socket?.id) {
+    if (liveId && socket?.id) {
       socket.emit(
         'SUBSCRIBES_LIVE',
-        { roomId: roomId, liveId: roomId },
+        { liveId: liveId },
         (response: ISubscribesResponse) => {
           console.log('SUBSCRIBES_LIVE', response);
           toast.success('Subscribes thành công.');
@@ -60,32 +60,28 @@ export function useLive({ roomId, socket }: ILiveAudio) {
           }));
         },
       );
-      socket.emit(
-        'LIVE_DETAIL',
-        { roomId: roomId, liveId: roomId },
-        (response: IResponse) => {
-          console.log('LIVE_DETAIL', response);
-          if (response.data?.live === true) {
-            toast.success('Phiên live đang diễn ra');
-            setLiveData((prev) => ({
-              ...prev,
-              live: true,
-              entity: response.data?.entity
-                ? (response.data?.entity as LiveEntity)
-                : null,
-            }));
-          } else {
-            toast.error('Phiên live audio chưa bắt đầu.');
-            setLiveData((prev) => ({
-              ...prev,
-              live: false,
-              entity: response.data?.entity
-                ? (response.data?.entity as LiveEntity)
-                : null,
-            }));
-          }
-        },
-      );
+      socket.emit('LIVE_DETAIL', { liveId: liveId }, (response: IResponse) => {
+        console.log('LIVE_DETAIL', response);
+        if (response.data?.live === true) {
+          toast.success('Phiên live đang diễn ra');
+          setLiveData((prev) => ({
+            ...prev,
+            live: true,
+            entity: response.data?.entity
+              ? (response.data?.entity as LiveEntity)
+              : null,
+          }));
+        } else {
+          toast.error('Phiên live audio chưa bắt đầu.');
+          setLiveData((prev) => ({
+            ...prev,
+            live: false,
+            entity: response.data?.entity
+              ? (response.data?.entity as LiveEntity)
+              : null,
+          }));
+        }
+      });
       setIsReady(true);
       socket.on('STARTED_LIVE', () => {
         console.log('STARTED_LIVE');
@@ -118,13 +114,13 @@ export function useLive({ roomId, socket }: ILiveAudio) {
         }));
       });
     }
-  }, [roomId, socket, socket?.id]);
+  }, [liveId, socket, socket?.id]);
 
   const handleLive: () => Promise<void> = useCallback(async () => {
-    if (roomId && socket?.id) {
+    if (liveId && socket?.id) {
       socket.emit(
         'BEGIN_LIVE',
-        { roomId: roomId, liveId: roomId },
+        { liveId: liveId },
         (response: IStartLiveResponse) => {
           console.log('BEGIN_LIVE', response);
           if (response.status) {
@@ -139,13 +135,13 @@ export function useLive({ roomId, socket }: ILiveAudio) {
         },
       );
     }
-  }, [roomId, socket]);
+  }, [liveId, socket]);
 
   const handleEndLive: () => Promise<void> = useCallback(async () => {
-    if (roomId && socket?.id) {
+    if (liveId && socket?.id) {
       socket.emit(
         'END_LIVE',
-        { roomId, liveId: roomId },
+        { liveId: liveId },
         (response: IStartLiveResponse) => {
           console.log('END_LIVE', response);
           if (response.status) {
@@ -157,7 +153,7 @@ export function useLive({ roomId, socket }: ILiveAudio) {
         },
       );
     }
-  }, [roomId, socket]);
+  }, [liveId, socket]);
 
   return {
     status: true,
