@@ -140,62 +140,101 @@ export function useLive({ liveId, socket }: ILiveAudio) {
 
   const handleEndLive: () => Promise<void> = useCallback(async () => {
     if (liveId && socket?.id) {
-      socket.emit(
-        'END_LIVE',
-        { liveId: liveId },
-        (response: IStartLiveResponse) => {
-          console.log('END_LIVE', response);
-          if (response.status) {
-            toast.success('Phiên live đã kết thúc');
-            setLiveData((prev) => ({ ...prev, live: false }));
-          } else {
-            toast.error('Không thể kết thúc phiên live. Vui lòng thử lại.');
-          }
-        },
-      );
+      return new Promise((resolve, reject) => {
+        socket.emit(
+          'END_LIVE',
+          { liveId: liveId },
+          (response: IStartLiveResponse) => {
+            console.log('END_LIVE', response);
+            if (response.status) {
+              toast.success('Phiên live đã kết thúc');
+              setLiveData((prev) => ({ ...prev, live: false }));
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-expect-error
+              resolve(response);
+            } else {
+              toast.error('Không thể kết thúc phiên live. Vui lòng thử lại.');
+              reject(response);
+            }
+          },
+        );
+      });
+    } else {
+      return Promise.reject(new Error('Missing liveId or socket'));
     }
   }, [liveId, socket]);
 
   const handleMixTrack: () => Promise<void> = useCallback(async () => {
+    console.log(`handleMixTrack`);
     if (liveId && socket?.id) {
-      console.log(`handleMixTrack`);
-      socket.emit('MIX_TRACK', { liveId: liveId }, (response: IMixTrack) => {
-        console.log('MIX_TRACK', response);
-        if (response.status) {
-          toast.success('Mix track các producers.');
-        } else {
-          toast.error('Không thể mix track cho liveId.');
-        }
+      return new Promise((resolve, reject) => {
+        socket.emit('MIX_TRACK', { liveId: liveId }, (response: IMixTrack) => {
+          console.log('MIX_TRACK', response);
+          if (response.status) {
+            toast.success('Mix track các producers.');
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-expect-error
+            resolve(response);
+          } else {
+            toast.error('Không thể mix track cho liveId.');
+            reject(response);
+          }
+        });
       });
+    } else {
+      return Promise.reject(new Error('Missing liveId or socket'));
     }
   }, [liveId, socket]);
 
   const handleSftp: () => Promise<void> = useCallback(async () => {
+    console.log(`handleSftp`);
     if (liveId && socket?.id) {
-      console.log(`handleSftp`);
-
-      socket.emit('SFTP_UPLOAD', { liveId: liveId }, (response: IMixTrack) => {
-        console.log('SFTP_UPLOAD', response);
-        if (response.status) {
-          toast.success('Xử lý file âm thành cho liveId');
-        } else {
-          toast.error('Không thể lưu lại được file âm thanh.');
-        }
+      return new Promise((resolve, reject) => {
+        socket.emit(
+          'SFTP_UPLOAD',
+          { liveId: liveId },
+          (response: IMixTrack) => {
+            console.log('SFTP_UPLOAD', response);
+            if (response.status) {
+              toast.success('Xử lý file âm thành cho liveId');
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-expect-error
+              resolve(response);
+            } else {
+              toast.error('Không thể lưu lại được file âm thanh.');
+              reject(response);
+            }
+          },
+        );
       });
+    } else {
+      return Promise.reject(new Error('Missing liveId or socket'));
     }
   }, [liveId, socket]);
 
   const handleWebhook: () => Promise<void> = useCallback(async () => {
+    console.log(`handleWebhook`);
     if (liveId && socket?.id) {
-      console.log(`handleWebhook`);
-      socket.emit('CALL_WEBHOOK', { liveId: liveId }, (response: IMixTrack) => {
-        console.log('CALL_WEBHOOK', response);
-        if (response.status) {
-          toast.success('Tạo Podcast thành công');
-        } else {
-          toast.error('Không tạo được Podcast.');
-        }
+      return new Promise((resolve, reject) => {
+        socket.emit(
+          'CALL_WEBHOOK',
+          { liveId: liveId },
+          (response: IMixTrack) => {
+            console.log('CALL_WEBHOOK', response);
+            if (response.status) {
+              toast.success('Tạo Podcast thành công');
+              // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+              // @ts-expect-error
+              resolve(response);
+            } else {
+              toast.error('Không tạo được Podcast.');
+              reject(false);
+            }
+          },
+        );
       });
+    } else {
+      return Promise.reject(new Error('Missing liveId or socket'));
     }
   }, [liveId, socket]);
 
