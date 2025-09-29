@@ -39,6 +39,7 @@ import { CleanupModule } from './cleanup/cleanup.module';
       poolSize: 100,
       logger: 'file',
       maxQueryExecutionTime: 3000,
+      extra: { timezone: 'Asia/Ho_Chi_Minh' },
     }),
     TypeOrmModule.forFeature(Object.values(entities as any)),
     HttpModule,
