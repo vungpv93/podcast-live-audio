@@ -21,7 +21,10 @@ export class SanctumService {
     this.logger.log(token, 'Running SanctumService@verify');
     const [id, plainTextToken] = token.split('|');
     if (!id || !plainTextToken) return null;
-    this.logger.log(Number(id), 'Running SanctumService@verify : ');
+    this.logger.log(
+      JSON.stringify({ id: Number(id), plainTextToken: plainTextToken }, null, 2),
+      'Running SanctumService@verify',
+    );
     const entity: PersonalAccessTokensEntity | null = await this.repo.findOneOrFail({ where: { id: Number(id) } });
     if (!entity) return null;
 

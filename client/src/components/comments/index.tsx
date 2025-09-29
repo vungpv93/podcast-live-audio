@@ -135,7 +135,10 @@ const Comments: React.FC<ILiveAudio> = ({ liveId, socket, auth }) => {
               </button>
               <button
                 className="px-3 py-1 bg-red-600 rounded text-white text-sm"
-                onClick={(): Promise<void> => handleDel(confirmDelete)}
+                onClick={async (): Promise<void> => {
+                  await handleDel(confirmDelete);
+                  setConfirmDelete(null);
+                }}
               >
                 Xoá
               </button>

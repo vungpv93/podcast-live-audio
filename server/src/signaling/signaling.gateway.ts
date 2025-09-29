@@ -328,8 +328,30 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   public async handleLiveEnded(@ConnectedSocket() client: Socket, @MessageBody() args: EndLiveDto): Promise<any> {
     this.logger.log(JSON.stringify({ client: client.id, ...args }, null, 2), 'END_LIVE');
     const { liveId } = args;
+    const realtime_total_comments: number = await this.redisService.countComment(liveId);
+    const realtime_total_participants: number = await this.redisService.countParticipants(liveId);
+
+    this.logger.log(
+      JSON.stringify(
+        {
+          count: {
+            realtime_total_comments: realtime_total_comments,
+            realtime_total_participants: realtime_total_participants,
+          },
+        },
+        null,
+        2,
+      ),
+      'END_LIVE',
+    );
+
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
-    if (entity) await this.liveProgramRepo.update(entity.id, { status: LiveProgramStatus.Finished });
+    if (entity)
+      await this.liveProgramRepo.update(entity.id, {
+        status: LiveProgramStatus.Finished,
+        realtime_total_participants: realtime_total_participants ?? 0,
+        realtime_total_comments: realtime_total_comments ?? 0,
+      });
 
     const liveRedis = await this.redisService.getLive(liveId);
     const routerId = liveRedis?.routerId;
