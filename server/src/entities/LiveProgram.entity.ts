@@ -27,6 +27,12 @@ export class LiveProgramEntity extends AbstractEntity {
   @Column({ name: 'recorder_flag', type: 'tinyint', nullable: true, default: null })
   recorder_flag: number;
 
+  @Column({ name: 'realtime_total_participants', type: 'int', nullable: true, default: null })
+  realtime_total_participants: number;
+
+  @Column({ name: 'realtime_total_comments', type: 'int', nullable: true, default: null })
+  realtime_total_comments: number;
+
   @DeleteDateColumn({ name: 'deleted_at', type: 'timestamp', nullable: true, default: null })
   deleted_at: string;
 }

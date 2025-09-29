@@ -6,7 +6,7 @@ import { TTL } from '../constants/app';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UserEntity } from '../entities';
 import { In, Repository } from 'typeorm';
-import { IRecorder, IRecorders } from './recorder/IRecorder.interface';
+import { IRecorders } from './recorder/IRecorder.interface';
 
 @Injectable()
 export class RedisService {
@@ -183,6 +183,10 @@ export class RedisService {
     await this.redis.zremrangebyscore(`live:${liveId}:comments`, score, score);
   }
 
+  public async countComment(liveId: string): Promise<number> {
+    return this.redis.zcard(`live:${liveId}:comments`);
+  }
+
   /**
    * @param liveId
    * @param cursor
@@ -205,6 +209,10 @@ export class RedisService {
       nextCursor,
       hasMore: !!nextCursor,
     };
+  }
+
+  public async countParticipants(liveId: string): Promise<number> {
+    return this.redis.scard(`live:${liveId}:histories`);
   }
 
   /**
