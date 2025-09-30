@@ -12,4 +12,7 @@ export enum ERRCD {
   // E1002xx - Comment
   E100201 = 100201, // CommentId không tồn tại
   E100209 = 100209, // Lỗi hệ thống khi thực hiện với comment
+
+  E900401 = 900401, // Loi xac thuc token
+  E900403 = 900403, // Loi do phan quyen tai khoan
 }

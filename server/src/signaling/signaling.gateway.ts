@@ -671,14 +671,35 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_COMMENTS_CREATE');
     const score: number = Date.now() * 1000 + Math.floor(Math.random() * 1000);
 
+    if (client.data.isAuthenticated !== true || !client.data.auth) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'EVT_COMMENTS_CREATE',
+        status: false,
+        errcd: ERRCD.E900401,
+        data: null,
+        args: args,
+      };
+    }
+
+    if (client.data.auth.guard === 'USER' && client.data.auth.id) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'EVT_COMMENTS_CREATE',
+        status: false,
+        errcd: ERRCD.E900403,
+        data: null,
+        args: args,
+      };
+    }
+
     const object = {
       id: uuidv4(),
       content: args.content,
-      userId: 187,
+      userId: client.data.auth.id,
       user: {
-        id: 187,
-        nickname: 'VungPV',
-        avatar: 'https://i.pravatar.cc/150?img=3',
+        id: client.data.auth.id,
+        nickname: client.data.auth.nickname || 'NA',
       },
       status: 1, // 1 | 0
       createdAt: moment().format('YYYY-MM-DD HH:mm:ss'),
