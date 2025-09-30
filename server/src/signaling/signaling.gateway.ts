@@ -129,6 +129,28 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
    * @param client
    * @param args
    */
+  @SubscribeMessage('EVT_SUBMIT')
+  public async handleTestEventSubmit(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() args: ILiveBaseDto,
+  ): Promise<any> {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }), 'EVT_SUBMIT');
+    const { liveId } = args;
+    client.to(liveId).emit('EVT_SUBMITTED', { key: 'test', value: 'demo' });
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'EVT_SUBMIT',
+      status: true,
+      errcd: null,
+      data: null,
+      args: args,
+    };
+  }
+
+  /**
+   * @param client
+   * @param args
+   */
   @SubscribeMessage('PING')
   public async handlePing(@ConnectedSocket() client: Socket, @MessageBody() args: LivePingDto): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }), 'PING');
