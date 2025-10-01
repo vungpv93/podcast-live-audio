@@ -224,17 +224,23 @@ export class RecorderService {
    * @param liveId
    */
   public async uploadSftp(liveId: string) {
-    await this.sftp.connect({
-      host: this.configService.get('SSH_SERVER_HOST'),
-      port: Number(this.configService.get('SSH_SERVER_PORT')),
-      username: this.configService.get('SSH_SERVER_USERNAME'),
-      password: this.configService.get('SSH_SERVER_PASSWORD'),
-    });
+    try {
+      await this.sftp.connect({
+        host: this.configService.get('SSH_SERVER_HOST'),
+        port: Number(this.configService.get('SSH_SERVER_PORT')),
+        username: this.configService.get('SSH_SERVER_USERNAME'),
+        password: this.configService.get('SSH_SERVER_PASSWORD'),
+      });
 
-    const localPath = path.resolve(`storage/${liveId}/final.mp3`);
-    const remotePath = `${this.configService.get('SSH_SERVER_STORAGE')}/${liveId}.mp3`;
-    await this.sftp.put(localPath, remotePath);
-    await this.sftp.end();
+      const localPath = path.resolve(`storage/${liveId}/final.mp3`);
+      const remotePath = `${this.configService.get('SSH_SERVER_STORAGE')}/${liveId}.mp3`;
+      await this.sftp.put(localPath, remotePath);
+    } catch (e) {
+      this.logger.log('RecorderService -> uploadSftp');
+      this.logger.log(e);
+    } finally {
+      await this.sftp.end();
+    }
   }
 
   /**
