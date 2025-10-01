@@ -42,6 +42,7 @@ import { SanctumService } from '../mediasoup/sanctum/sanctum.service';
 import { CleanupService } from '../cleanup/cleanup.service';
 import { LiveProgramStatus } from '../enums/live-program-status';
 import { RecorderService } from '../mediasoup/recorder/recorder.service';
+import { ClientService } from './client.service';
 
 @WebSocketGateway({
   cors: {
@@ -66,6 +67,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     private readonly resourcesService: ResourcesService,
     private readonly cleanupService: CleanupService,
     private readonly recorderService: RecorderService,
+    private readonly clientService: ClientService,
   ) {}
 
   afterInit() {
@@ -115,6 +117,17 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('TEST_EVENT')
   public async handleTestEvent(@ConnectedSocket() client: Socket, @MessageBody() args: any): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }), 'TEST_EVENT');
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'TEST_EVENT',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
       evt: 'TEST_EVENT',
@@ -177,6 +190,18 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @MessageBody() args: SubscribesDto,
   ): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id }, null, 2), 'SUBSCRIBES_LIVE');
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'SUBSCRIBES_LIVE',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     const { liveId } = args;
     await this.redisService.sockets(args.liveId, client.id);
     client.join(liveId);
@@ -195,6 +220,18 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @MessageBody() args: AuthVerifiedDto,
   ): Promise<any> {
     this.logger.log(JSON.stringify({ socketId: client.id }, null, 2), 'AUTH_VERIFIED');
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'AUTH_VERIFIED',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     const { liveId } = args;
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
     if (!entity) {
@@ -243,7 +280,19 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @ConnectedSocket() client: Socket,
     @MessageBody() args: LiveDetailDto,
   ): Promise<any> {
-    this.logger.log(JSON.stringify({ client: client.id, ...args }, null, 2), 'LIVE_DETAIL');
+    this.logger.log(JSON.stringify({ client: client.id, ...args, auth: client.data?.auth }, null, 2), 'LIVE_DETAIL');
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'LIVE_DETAIL',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     const { liveId } = args;
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
     // const room = this.roomService.getRoom(liveId);
@@ -284,6 +333,18 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('BEGIN_LIVE')
   public async handleRoomBeginLive(@ConnectedSocket() client: Socket, @MessageBody() args: BeginLiveDto): Promise<any> {
     this.logger.log(JSON.stringify({ client: client.id, ...args }, null, 2), 'BEGIN_LIVE');
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'BEGIN_LIVE',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     const { liveId } = args;
 
     // 1. Kiểm tra trạng thái live trong Redis trước
@@ -349,23 +410,27 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('END_LIVE')
   public async handleLiveEnded(@ConnectedSocket() client: Socket, @MessageBody() args: EndLiveDto): Promise<any> {
     this.logger.log(JSON.stringify({ client: client.id, ...args }, null, 2), 'END_LIVE');
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'END_LIVE',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     const { liveId } = args;
     const realtime_total_comments: number = await this.redisService.countComment(liveId);
     const realtime_total_participants: number = await this.redisService.countParticipants(liveId);
 
-    this.logger.log(
-      JSON.stringify(
-        {
-          count: {
-            realtime_total_comments: realtime_total_comments,
-            realtime_total_participants: realtime_total_participants,
-          },
-        },
-        null,
-        2,
-      ),
-      'END_LIVE',
-    );
+    const count = {
+      realtime_total_comments: realtime_total_comments,
+      realtime_total_participants: realtime_total_participants,
+    };
+    this.logger.log(JSON.stringify({ count: count }, null, 2), 'END_LIVE');
 
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
     if (entity)
@@ -406,6 +471,17 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('JOIN_LIVE')
   public async handleJoinLive(@MessageBody() args: JoinChannelDto, @ConnectedSocket() client: Socket) {
     this.logger.log(JSON.stringify({ clientId: client.id }, null, 2), `JOIN_LIVE`);
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'JOIN_LIVE',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
 
     const { liveId, peerId } = args;
 
@@ -483,37 +559,9 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       const count = await this.redisService.countSockets(liveId);
       this.server.to(liveId).emit('PARTICIPANTS_LEAVE', { liveId: liveId, socketId: client.id, count: count });
     }
-    // for (const roomId of rooms) {
-    //   if (roomId !== client.id) {
-    //     const room = this.roomService.getRoom(roomId);
-    //     if (room) {
-    //       const peer = room.peers.get(client.id);
-    //       if (peer) {
-    //         // Close all producers
-    //         for (const producer of peer.producers.values()) {
-    //           producer.producer.close();
-    //         }
-    //         // Close all consumers
-    //         for (const consumer of peer.consumers.values()) {
-    //           consumer.consumer.close();
-    //         }
-    //         // Close all transports
-    //         for (const transport of peer.transports.values()) {
-    //           transport.transport.close();
-    //         }
-    //         room.peers.delete(client.id);
-    //       }
-    //       client.leave(roomId);
-    //       client.to(roomId).emit('peer-left', { peerId: client.id });
-    //       if (room.peers.size === 0) {
-    //         this.roomService.removeRoom(roomId);
-    //       }
-    //     }
-    //   }
-    // }
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
-      evt: 'LEAVE_LIVE',
+      evt: 'LEAVE',
       status: true,
       errcd: null,
       data: null,
@@ -523,6 +571,19 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   // produce | EVT_PRODUCE
   @SubscribeMessage('EVT_PRODUCE')
   public async handleProduce(@MessageBody() data, @ConnectedSocket() client: Socket) {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...data }, null, 2), `EVT_PRODUCE`);
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'EVT_PRODUCE',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: data,
+      };
+    }
+
     const { liveId, roomId, peerId, kind, transportId, rtpParameters } = data;
 
     try {
@@ -549,6 +610,20 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   // consume | EVT_CONSUME
   @SubscribeMessage('EVT_CONSUME')
   public async handleConsume(@MessageBody() data, @ConnectedSocket() client: Socket) {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...data }, null, 2), `EVT_CONSUME`);
+
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'EVT_PRODUCE',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: data,
+      };
+    }
+
     const { roomId, liveId, peerId, producerId, rtpCapabilities, transportId } = data;
     try {
       const liveRedis = await this.redisService.getLive(liveId);
@@ -612,6 +687,19 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('CONNECT_TRANSPORT')
   public async handleConnectTransportLive(@MessageBody() data: any, @ConnectedSocket() client: Socket) {
     this.logger.log(JSON.stringify({ ...data, client: client.id }, null, 2), 'CONNECT_TRANSPORT');
+
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'CONNECT_TRANSPORT',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: data,
+      };
+    }
+
     // TODO Xu ly connect transport
 
     const transport = this.resource.transports.get(data.transportId);
@@ -673,6 +761,19 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('EVT_COMMENTS')
   public async handleComments(@ConnectedSocket() client: Socket, @MessageBody() args: CommentDto): Promise<any> {
     this.logger.log(JSON.stringify({ client: client.id, ...args }, null, 2), 'EVT_COMMENTS');
+
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'EVT_COMMENTS',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     const comments = await this.redisService.getComments(args.liveId || null, args.cursor ?? undefined);
 
     return {
@@ -691,6 +792,19 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @MessageBody() args: CreateCommentDto,
   ): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_COMMENTS_CREATE');
+
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'EVT_COMMENTS_CREATE',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     const score: number = Date.now() * 1000 + Math.floor(Math.random() * 1000);
 
     if (client.data.isAuthenticated !== true || !client.data.auth) {
@@ -745,6 +859,18 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   public async handleUpdateComments(@ConnectedSocket() client: Socket, @MessageBody() args: LiveDto): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_COMMENTS_UPDATE');
 
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'EVT_COMMENTS_UPDATE',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     this.server.to(args.liveId).emit('EVT_COMMENTS_UPDATED', args);
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
@@ -762,6 +888,18 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     @MessageBody() args: CommentDelDto,
   ): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_COMMENTS_DELETED');
+
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'EVT_COMMENTS_DELETE',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
 
     await this.redisService.deleteComment(args.liveId, args.score);
 
@@ -797,11 +935,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
           id: uuidv4(),
           content: comment,
           userId: 187,
-          user: {
-            id: 187,
-            nickname: 'VungPV',
-            avatar: 'https://i.pravatar.cc/150?img=3',
-          },
+          user: { id: 187, nickname: 'VungPV' },
           status: 1, // 1 | 0
           createdAt: moment(createdAtDate).format('YYYY-MM-DD HH:mm:ss'),
           score: score,
@@ -830,6 +964,18 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   public async handleGetSocketIds(@ConnectedSocket() client: Socket, @MessageBody() args: ILiveBaseDto): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_GET_SOCKETS');
 
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'EVT_GET_SOCKETS',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     const sockets: { socketId: string; userId: number }[] = await this.redisService.getSockets(args.liveId);
 
     return {
@@ -846,6 +992,18 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   public async handleCountSocket(@ConnectedSocket() client: Socket, @MessageBody() args: ILiveBaseDto): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'EVT_COUNT_SOCKETS');
 
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'EVT_COUNT_SOCKETS',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     const count: number = await this.redisService.countSockets(args.liveId);
 
     return {
@@ -861,6 +1019,19 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('MIX_TRACK')
   public async handleMixTrack(@ConnectedSocket() client: Socket, @MessageBody() args: ILiveBaseDto): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'MIX_TRACK');
+
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'MIX_TRACK',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     await this.recorderService.mixTracks(args.liveId);
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
@@ -875,6 +1046,19 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('SFTP_UPLOAD')
   public async handleSftpUpload(@ConnectedSocket() client: Socket, @MessageBody() args: ILiveBaseDto): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'SFTP_UPLOAD');
+
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'SFTP_UPLOAD',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     await this.recorderService.uploadSftp(args.liveId);
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
@@ -889,6 +1073,19 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
   @SubscribeMessage('CALL_WEBHOOK')
   public async handleCallWebhook(@ConnectedSocket() client: Socket, @MessageBody() args: ILiveBaseDto): Promise<any> {
     this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), 'CALL_WEBHOOK');
+
+    const errcd: number | void = await this.clientService.validated(client);
+    if (errcd) {
+      return {
+        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+        evt: 'CALL_WEBHOOK',
+        status: false,
+        errcd: errcd,
+        data: null,
+        args: args,
+      };
+    }
+
     await this.recorderService.webhook(args.liveId);
     return {
       timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),

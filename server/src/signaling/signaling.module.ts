@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { LiveProgramEntity, PersonalAccessTokensEntity } from '../entities';
 import { ResourceModule } from '../resources/resources.module';
 import { RecorderModule } from '../mediasoup/recorder/recorder.module';
+import { ClientService } from './client.service';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { RecorderModule } from '../mediasoup/recorder/recorder.module';
     RecorderModule,
     forwardRef(() => MediasoupModule),
   ],
-  providers: [SignalingGateway],
-  exports: [SignalingGateway],
+  providers: [SignalingGateway, ClientService],
+  exports: [SignalingGateway, ClientService],
 })
 export class SignalingModule {}
