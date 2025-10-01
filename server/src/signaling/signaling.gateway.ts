@@ -295,7 +295,6 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
     const { liveId } = args;
     const entity: LiveProgramEntity = await this.liveProgramRepo.findOne({ where: { code: liveId } });
-    // const room = this.roomService.getRoom(liveId);
     const liveRedis = await this.redisService.getLive(liveId);
     let live = false;
     if (liveRedis) {
@@ -306,7 +305,6 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
     const dataRes = {
       liveId: liveId,
-      roomId: liveId, // TODO Can update lai vi khong can thiet
       live: live,
       entity: entity,
     };
@@ -570,7 +568,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   // produce | EVT_PRODUCE
   @SubscribeMessage('EVT_PRODUCE')
-  public async handleProduce(@MessageBody() data, @ConnectedSocket() client: Socket) {
+  public async handleProduce(@ConnectedSocket() client: Socket, @MessageBody() data) {
     this.logger.log(JSON.stringify({ clientId: client.id, ...data }, null, 2), `EVT_PRODUCE`);
     const errcd: number | void = await this.clientService.validated(client);
     if (errcd) {
@@ -609,7 +607,7 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
 
   // consume | EVT_CONSUME
   @SubscribeMessage('EVT_CONSUME')
-  public async handleConsume(@MessageBody() data, @ConnectedSocket() client: Socket) {
+  public async handleConsume(@ConnectedSocket() client: Socket, @MessageBody() data) {
     this.logger.log(JSON.stringify({ clientId: client.id, ...data }, null, 2), `EVT_CONSUME`);
 
     const errcd: number | void = await this.clientService.validated(client);
@@ -806,28 +804,6 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
     }
 
     const score: number = Date.now() * 1000 + Math.floor(Math.random() * 1000);
-
-    if (client.data.isAuthenticated !== true || !client.data.auth) {
-      return {
-        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
-        evt: 'EVT_COMMENTS_CREATE',
-        status: false,
-        errcd: ERRCD.E900401,
-        data: null,
-        args: args,
-      };
-    }
-
-    if (client.data.auth.guard === 'USER' && client.data.auth.id) {
-      return {
-        timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
-        evt: 'EVT_COMMENTS_CREATE',
-        status: false,
-        errcd: ERRCD.E900403,
-        data: null,
-        args: args,
-      };
-    }
 
     const object = {
       id: uuidv4(),
