@@ -29,3 +29,15 @@ export class BeginLiveDto extends ILiveBaseDto {}
 export class EndLiveDto extends ILiveBaseDto {}
 
 export class LeaveDto extends ILiveBaseDto {}
+
+export class ProducerPauseDto extends ILiveBaseDto {
+  @IsNotEmpty()
+  @IsString()
+  producerId: string;
+}
+
+export class ProducerResumeDto extends ILiveBaseDto {
+  @IsNotEmpty()
+  @IsString()
+  producerId: string;
+}

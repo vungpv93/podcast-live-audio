@@ -90,4 +90,17 @@ export class ProducerConsumerService {
       rtpParameters: consumer.rtpParameters,
     };
   }
+
+  /**
+   * @functionName handleProducerPause
+   */
+  public async handleProducerPause(socketId: string): Promise<void> {
+    this.logger.log(JSON.stringify({}, null, 2), 'handleProducerPause -> 1');
+    const producers: string[] = this.resource.sockets.get(socketId)?.producers;
+    this.logger.log(JSON.stringify({ producers: producers }, null, 2), 'handleProducerPause -> 2');
+    for (const producerId of producers) {
+      const instance: Producer = this.resource.producers.get(producerId);
+      if (instance) await instance.pause();
+    }
+  }
 }
