@@ -9,7 +9,7 @@ Realtime transport
 Storage: local
 Authentication: Sanctum Provider
 
-ec2   ( Node Mediasoup )
+EC2   ( Node Mediasoup )
 Redis ( Node Redis )
 ELB: Load Balancer
 ```
@@ -23,10 +23,10 @@ ELB: Load Balancer
 - Redis: Tạo 1 instance riêng để làm DB ( Nếu cần sẽ chuyển redis normal sang redis cluster )
 - PipeRouter: Xử lý việc 1 live có thể sử dụng nhiều room. và tựng động pipe router đang host sang các router khác.
 - ELB : WebSocket Gateway
-- Recording: Tách riêng node này.
+- Recorder: Tách riêng node này.
 ```
 
-### 3. Triển khai
+### 3. Triển khai (local)
 
 ### 3.1. Redis + MySQL
 
@@ -73,15 +73,15 @@ ELB: Load Balancer
   - Lưu metadata vào Redis.
 ```
 
-### 3.6. Recording
+### 3.6. Recorder
 
 ```
   - Tách riêng dịch vụ này ra ngoài.
   - Tại 1 thơi điểm sẽ có ít phiên live cùng lúc
-  - Sử dụng 1 con ec2 ( hoặc ecs ) riêng biệt để build node:recorder
+  - Sử dụng 1 con ec2 riêng biệt để build node:recorder
 ```
 
-### 3.6. Flow với Producer
+### 3.7. Flow với Producer-Consumer
 
 ```
   - Thực tế :
@@ -90,12 +90,19 @@ ELB: Load Balancer
     - Tuy nhiên việc mở thêm tab mới, hoặc tắt trình duyệt hiện tại -> sau đó mở trình duyệt mới hoặc F5 để tải lại trang diễn ra 1 cách tự nhiên
     => Dẫn đến sẽ close producer cũ và tạo 1 producer mới.
 
+    i-A (primary)
+      -> pipeRouter
+    i-B socketId_1
+    i-C socketId_2
+    i-D
+    i-E
+
     Sẽ có 2 phương án về việc scale producer
-    a, Tất cả host join vào cùng 1 Router primary
-    b, Multi-router + PipeTransport
+    [v] a, Tất cả host join vào cùng 1 Router primary
+    [x] b, Multi-router + PipeTransport
 ```
 
-### 3.7. Emit socket
+### 3.8. Emit socket
 
 ```
   - Convert toàn bộ logic emit trực tiếp ( Không sử dụng emit trưc tiếp )
@@ -105,7 +112,7 @@ ELB: Load Balancer
   eg: client.to(live).emit() -> Sẽ gửi tới các client đang lắng nghe trừ client hiện tại ( client thưc hiện emit )
 ```
 
-### 3.8. Bình luận, và Participants người tham gia,
+### 3.9. Bình luận và Participants.
 
 ```
   Do vẫn để về autoscale up ->
