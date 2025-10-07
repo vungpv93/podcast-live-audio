@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import type { ILiveAudio } from '../../dto/live-audio';
 import AudioAnalyzer from '../AudioAnalyzer';
 import { useLiveAudio } from '../../hooks/useLiveAudio';
@@ -29,23 +29,34 @@ const Index: React.FC<ILiveAudio> = ({ liveId, socket, auth, entity }) => {
     localStream,
   });
 
+  const handleMic = useCallback(() => {
+    console.log('handleMic');
+  }, []);
+
   useEffect(() => {
     console.log('Live data updated: ', liveData);
   }, [liveData]);
 
   const { confirm, ConfirmModal, setIsOpen, updateStepStatus } = useConfirm();
   const handleEndLive: () => Promise<void> = async (): Promise<void> => {
-    const ok = await confirm(
-      'Bạn có chắc muốn kết thúc phiên live podcast này không?',
-      {
-        title: 'Kết thúc phiên live podcast',
-        steps: [
+    const steps = entity?.recorder_flag
+      ? [
           { number: 1, name: 'Step 01: Kết thúc phiên live', status: 0 },
           { number: 2, name: 'Step 02: Mix track', status: 0 },
           { number: 3, name: 'Step 03: Upload file recorder', status: 0 },
           { number: 4, name: 'Step 04: Tạo podcast', status: 0 },
           { number: 5, name: 'Step 05: Hoàn thành', status: 0 },
-        ],
+        ]
+      : [
+          { number: 1, name: 'Step 01: Kết thúc phiên live', status: 0 },
+          { number: 5, name: 'Step 02: Hoàn thành', status: 0 },
+        ];
+
+    const ok = await confirm(
+      'Bạn có chắc muốn kết thúc phiên live podcast này không?',
+      {
+        title: 'Kết thúc phiên live podcast',
+        steps: steps,
       },
     );
 
@@ -58,23 +69,25 @@ const Index: React.FC<ILiveAudio> = ({ liveId, socket, auth, entity }) => {
       console.log('The step 1 is finished');
       updateStepStatus(1, 2);
 
-      updateStepStatus(2, 1);
-      await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
-      await handleMixTrack();
-      console.log('The step 2 is finished');
-      updateStepStatus(2, 2);
+      if (entity?.recorder_flag) {
+        updateStepStatus(2, 1);
+        await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
+        await handleMixTrack();
+        console.log('The step 2 is finished');
+        updateStepStatus(2, 2);
 
-      updateStepStatus(3, 1);
-      await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
-      await handleSftp();
-      console.log('The step 3 is finished');
-      updateStepStatus(3, 2);
+        updateStepStatus(3, 1);
+        await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
+        await handleSftp();
+        console.log('The step 3 is finished');
+        updateStepStatus(3, 2);
 
-      updateStepStatus(4, 1);
-      await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
-      await handleWebhook();
-      console.log('The step 4 is finished');
-      updateStepStatus(4, 2);
+        updateStepStatus(4, 1);
+        await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
+        await handleWebhook();
+        console.log('The step 4 is finished');
+        updateStepStatus(4, 2);
+      }
 
       updateStepStatus(5, 1);
       await new Promise((res) => setTimeout(res, 1000)); // TODO Mock evt
@@ -168,7 +181,7 @@ const Index: React.FC<ILiveAudio> = ({ liveId, socket, auth, entity }) => {
         <div className="absolute inset-0 flex items-center justify-center">
           <button
             className={`h-24 w-24 rounded-full flex items-center justify-center border-0 focus:outline-none focus:ring-0 hover:bg-none hover:shadow-none hover:outline-none ${isMicOn ? 'bg-red-600' : 'bg-gray-600'}`}
-            // onClick={handleRequestMic}
+            onClick={handleMic}
           >
             {isMicOn ? (
               <BsMicFill className="h-16 w-16 opacity-70" />

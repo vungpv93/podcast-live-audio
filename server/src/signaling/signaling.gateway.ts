@@ -21,6 +21,8 @@ import {
   LiveDetailDto,
   LiveDto,
   LivePingDto,
+  ProducerPauseDto,
+  ProducerResumeDto,
   SubscribesDto,
 } from './dto/live.dto';
 import { RedisService } from '../mediasoup/redis.service';
@@ -603,6 +605,48 @@ export class SignalingGateway implements OnGatewayInit, OnGatewayConnection, OnG
       this.logger.error(error);
       client.emit('produce-error', { error: error.message });
     }
+  }
+
+  /**
+   * @functionName  handleProducePause
+   * @param client
+   * @param args
+   * @events EVT_PRODUCE_PAUSE
+   */
+  @SubscribeMessage('EVT_PRODUCER_PAUSE')
+  public async handleProducePause(@ConnectedSocket() client: Socket, @MessageBody() args: ProducerPauseDto) {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), `EVT_PRODUCE_PAUSE`);
+    const { liveId } = args;
+
+    this.server.to(liveId).emit('PRODUCER_PAUSED', { liveId: liveId });
+
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'EVT_PRODUCE_PAUSE',
+      status: true,
+      errcd: null,
+      data: null,
+      args: args,
+    };
+  }
+
+  /**
+   * @functionName  handleProduceResume
+   * @param client
+   * @param args
+   * @events EVT_PRODUCE_RESUME
+   */
+  @SubscribeMessage('EVT_PRODUCE_RESUME')
+  public async handleProduceResume(@ConnectedSocket() client: Socket, @MessageBody() args: ProducerResumeDto) {
+    this.logger.log(JSON.stringify({ clientId: client.id, ...args }, null, 2), `EVT_PRODUCE_RESUME`);
+    return {
+      timestamp: moment().format('YYYY-MM-DD HH:mm:ss'),
+      evt: 'EVT_PRODUCE_RESUME',
+      status: true,
+      errcd: null,
+      data: null,
+      args: args,
+    };
   }
 
   // consume | EVT_CONSUME
