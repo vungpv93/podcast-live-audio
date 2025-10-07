@@ -85,8 +85,6 @@ const Index: React.FC<Props> = ({ audioStream, localStream }: Props) => {
       analysers.forEach((analyser, idx) => {
         let x = 0;
         const dataArray = dataArrays[idx];
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-expect-error
         analyser.getByteTimeDomainData(dataArrays[idx]);
         const avg: number =
           dataArray.reduce((sum, v): number => sum + Math.abs(v - 128), 0) /
