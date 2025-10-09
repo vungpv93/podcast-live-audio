@@ -90,6 +90,14 @@ export class RedisService {
   }
 
   /**
+   * @param liveId
+   */
+  public async getLivedAt(liveId: string): Promise<number | null> {
+    const value = await this.redis.get(`live:${liveId}:live_at`);
+    return value ? Number(value) : null;
+  }
+
+  /**
    * @functionName endLive
    * @param liveId
    * @author vungpv93@gmail.com
@@ -100,7 +108,7 @@ export class RedisService {
    */
   public async endLive(liveId: string): Promise<void> {
     await this.redis.del(`live:${liveId}:status`);
-    await this.redis.del(`live:${liveId}:live_at`);
+    // await this.redis.del(`live:${liveId}:live_at`);
     await this.redis.del(`live:${liveId}:router_id`);
     await this.redis.del(`live:${liveId}:rtp_capabilities`);
   }
@@ -193,21 +201,26 @@ export class RedisService {
    */
   public async getComments(liveId: string, cursor?: number): Promise<any> {
     const limit = 20;
-    const max = cursor ? `(${cursor}` : '+inf'; // exclusive nếu có cursor
+    const max = cursor ? `(${cursor}` : '+inf';
     const min = '-inf';
     const items = await this.redis.zrevrangebyscore(`live:${liveId}:comments`, max, min, 'LIMIT', 0, limit);
     const comments = items.map((strObj) => JSON.parse(strObj));
 
     let nextCursor: string | null = null;
+    let hasMore = false;
     if (comments.length > 0) {
       const last = comments[comments.length - 1];
       nextCursor = last.score || null;
+      if (nextCursor) {
+        const countNext = await this.redis.zcount(`live:${liveId}:comments`, '-inf', `(${nextCursor}`);
+        hasMore = countNext > 0;
+      }
     }
 
     return {
       data: comments,
       nextCursor,
-      hasMore: !!nextCursor,
+      hasMore: !!hasMore,
     };
   }
 

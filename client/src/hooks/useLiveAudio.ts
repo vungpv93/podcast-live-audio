@@ -23,7 +23,13 @@ interface ProducerInfo {
   kind: ConsumerKind;
 }
 
-export function useLiveAudio({ liveId, socket, localStream }: ILiveAudio) {
+export function useLiveAudio({
+  liveId,
+  socket,
+  localStream,
+  volume,
+  isMicEnabled,
+}: ILiveAudio) {
   const pingInterval = useRef<NodeJS.Timeout | null>(null);
   const consumersRef: RefObject<types.Consumer[]> = useRef<types.Consumer[]>(
     [],
@@ -31,6 +37,7 @@ export function useLiveAudio({ liveId, socket, localStream }: ILiveAudio) {
   const mergedStreamRef: RefObject<MediaStream> = useRef<MediaStream>(
     new MediaStream(),
   );
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const [audioStream, setAudioStream] = useState<MediaStream>();
   // const [localStream, setLocalStream] = useState<MediaStream>();
 
@@ -215,17 +222,38 @@ export function useLiveAudio({ liveId, socket, localStream }: ILiveAudio) {
           setAudioStream(new MediaStream(mergedStreamRef.current.getTracks()));
 
           if (consumer.kind === 'audio') {
-            const audioElement: HTMLAudioElement =
-              document.createElement('audio');
-            audioElement.srcObject = mergedStreamRef.current;
-            audioElement.autoplay = true;
-            audioElement.controls = true;
+            // Kiểm tra xem đã có audio element chưa
+            if (!audioElementRef.current) {
+              const audioElement: HTMLAudioElement =
+                document.createElement('audio');
+              audioElement.srcObject = mergedStreamRef.current;
+              audioElement.autoplay = true;
+              audioElement.controls = true;
+              audioElementRef.current = audioElement;
 
-            try {
-              await audioElement.play();
-            } catch (err) {
-              toast.error('Audio playback failed');
-              console.error('Audio playback failed:', err);
+              // Áp dụng volume ngay sau khi tạo audio element
+              if (volume === undefined || volume === 0) {
+                audioElement.muted = true;
+                console.log('New audio element created and muted');
+              } else {
+                audioElement.muted = false;
+                audioElement.volume = volume / 100;
+                console.log(
+                  'New audio element created with volume:',
+                  volume / 100,
+                );
+              }
+
+              try {
+                await audioElement.play();
+                console.log('Audio element playing');
+              } catch (err) {
+                toast.error('Audio playback failed');
+                console.error('Audio playback failed:', err);
+              }
+            } else {
+              console.log('Audio element already exists, updating srcObject');
+              audioElementRef.current.srcObject = mergedStreamRef.current;
             }
           }
         },
@@ -233,6 +261,88 @@ export function useLiveAudio({ liveId, socket, localStream }: ILiveAudio) {
     },
     [liveId, socket],
   );
+
+  // Điều khiển volume của audio element
+  const updateVolume = useCallback(() => {
+    console.log(`The updateVolume function is running`, {
+      volume,
+      audioElement: audioElementRef.current,
+    });
+
+    // Kiểm tra audio element từ ref trước
+    if (audioElementRef.current) {
+      if (volume === undefined || volume === 0) {
+        audioElementRef.current.muted = true;
+        audioElementRef.current.pause();
+        console.log(
+          'Audio muted and paused (ref):',
+          audioElementRef.current.muted,
+          audioElementRef.current.paused,
+        );
+      } else {
+        audioElementRef.current.muted = false;
+        audioElementRef.current.volume = volume / 100;
+        if (audioElementRef.current.paused) {
+          audioElementRef.current.play().catch(console.error);
+        }
+        console.log(
+          'Audio volume set (ref):',
+          audioElementRef.current.volume,
+          'muted:',
+          audioElementRef.current.muted,
+          'paused:',
+          audioElementRef.current.paused,
+        );
+      }
+    } else {
+      console.log('No audio element found in ref');
+    }
+
+    // Tìm tất cả audio elements trên trang và điều chỉnh volume
+    const allAudioElements = document.querySelectorAll('audio');
+    console.log('Found audio elements:', allAudioElements.length);
+    allAudioElements.forEach((audio, index) => {
+      if (volume === undefined || volume === 0) {
+        audio.muted = true;
+        audio.pause(); // Thêm pause để đảm bảo tắt hoàn toàn
+        console.log(
+          `Audio ${index} muted and paused:`,
+          audio.muted,
+          audio.paused,
+        );
+      } else {
+        audio.muted = false;
+        audio.volume = volume / 100;
+        // Chỉ play nếu chưa đang play
+        if (audio.paused) {
+          audio.play().catch(console.error);
+        }
+        console.log(
+          `Audio ${index} volume set:`,
+          audio.volume,
+          'muted:',
+          audio.muted,
+          'paused:',
+          audio.paused,
+        );
+      }
+    });
+  }, [volume]);
+
+  // Theo dõi thay đổi volume và cập nhật audio element
+  useEffect(() => {
+    updateVolume();
+  }, [updateVolume]);
+
+  useEffect(() => {
+    if (localStream) {
+      const audioTracks = localStream.getAudioTracks();
+      audioTracks.forEach(track => {
+        track.enabled = isMicEnabled || false;
+      });
+      console.log(`Audio tracks ${isMicEnabled ? 'enabled' : 'disabled'} for sending`);
+    }
+  }, [localStream, isMicEnabled]);
 
   const handleJoinLive: () => Promise<void> =
     useCallback(async (): Promise<void> => {

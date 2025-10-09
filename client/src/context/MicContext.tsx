@@ -9,8 +9,10 @@ import React, {
 
 type MicContextType = {
   isMicOn: boolean;
+  isMicEnabled: boolean;
   localStream?: MediaStream;
   handleRequestMic: () => Promise<void>;
+  toggleMicSend: () => void; // Toggle việc gửi âm thanh
   showMicPermissionModal: boolean;
   showMicErrorModal: boolean;
 };
@@ -21,6 +23,7 @@ const MicContext: Context<MicContextType | undefined> = createContext<
 
 export const MicProvider = ({ children }: { children: React.ReactNode }) => {
   const [isMicOn, setIsMicOn] = useState<boolean>(false);
+  const [isMicEnabled, setIsMicEnabled] = useState<boolean>(false);
   const [localStream, setLocalStream] = useState<MediaStream>();
   const [showMicPermissionModal, setShowMicPermissionModal] =
     useState<boolean>(false);
@@ -37,7 +40,7 @@ export const MicProvider = ({ children }: { children: React.ReactNode }) => {
         if (mediaStream) {
           setIsMicOn(true);
           setLocalStream(mediaStream);
-          setIsMicOn(true);
+          setIsMicEnabled(true);
           localStorage.setItem('micGranted', 'true');
           setShowMicPermissionModal(false);
           setShowMicErrorModal(false);
@@ -50,6 +53,18 @@ export const MicProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.removeItem('micGranted');
       }
     }, [localStream]);
+
+  const toggleMicSend = useCallback(() => {
+    if (!isMicOn) {
+      console.log('Microphone chưa được cấp quyền');
+      return;
+    }
+
+    const newMicEnabledState = !isMicEnabled;
+    setIsMicEnabled(newMicEnabledState);
+
+    console.log(`Mic send ${newMicEnabledState ? 'enabled' : 'disabled'}`);
+  }, [isMicOn, isMicEnabled]);
 
   useEffect(() => {
     const micGranted = localStorage.getItem('micGranted');
@@ -71,10 +86,12 @@ export const MicProvider = ({ children }: { children: React.ReactNode }) => {
     <MicContext.Provider
       value={{
         isMicOn,
+        isMicEnabled,
         localStream: localStream,
         showMicPermissionModal,
         showMicErrorModal,
         handleRequestMic,
+        toggleMicSend,
       }}
     >
       {children}
