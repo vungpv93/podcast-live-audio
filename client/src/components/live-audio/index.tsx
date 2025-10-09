@@ -4,7 +4,6 @@ import AudioAnalyzer from '../AudioAnalyzer';
 import { useLiveAudio } from '../../hooks/useLiveAudio';
 import { useLive } from '../../hooks/useLive.ts';
 import { HiStatusOffline, HiStatusOnline } from 'react-icons/hi';
-import { HiPlay } from 'react-icons/hi2';
 import { BsMicFill, BsMicMuteFill } from 'react-icons/bs';
 import Volume from '../Volume';
 import { useConfirm } from '../../hooks/useConfirm.tsx';
@@ -13,8 +12,8 @@ import { useMic } from '../../context/MicContext.tsx';
 
 const Index: React.FC<ILiveAudio> = ({ liveId, socket, auth, entity }) => {
   console.log('auth is ', auth);
-  const [volume, setVolume] = useState<number>(80);
-  const { isMicOn, localStream } = useMic();
+  const [volume, setVolume] = useState<number>(50);
+  const { isMicOn, isMicEnabled, localStream, toggleMicSend } = useMic();
   const {
     liveData,
     handleLive,
@@ -27,11 +26,14 @@ const Index: React.FC<ILiveAudio> = ({ liveId, socket, auth, entity }) => {
     liveId,
     socket,
     localStream,
+    volume,
+    isMicEnabled,
   });
 
   const handleMic = useCallback(() => {
-    console.log('handleMic');
-  }, []);
+    console.log('handleMic - toggling mic send');
+    toggleMicSend();
+  }, [toggleMicSend]);
 
   useEffect(() => {
     console.log('Live data updated: ', liveData);
@@ -180,15 +182,22 @@ const Index: React.FC<ILiveAudio> = ({ liveId, socket, auth, entity }) => {
         />
         <div className="absolute inset-0 flex items-center justify-center">
           <button
-            className={`h-24 w-24 rounded-full flex items-center justify-center border-0 focus:outline-none focus:ring-0 hover:bg-none hover:shadow-none hover:outline-none ${isMicOn ? 'bg-red-600' : 'bg-gray-600'}`}
+            className={`h-24 w-24 rounded-full flex items-center justify-center border-0 focus:outline-none focus:ring-0 hover:bg-none hover:shadow-none hover:outline-none transition-colors duration-200 ${isMicEnabled ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-700'}`}
             onClick={handleMic}
+            title={isMicEnabled ? 'Tắt gửi âm thanh' : 'Bật gửi âm thanh'}
+            disabled={!isMicOn}
           >
-            {isMicOn ? (
+            {isMicEnabled ? (
               <BsMicFill className="h-16 w-16 opacity-70" />
             ) : (
               <BsMicMuteFill className="h-16 w-16 opacity-70" />
             )}
           </button>
+        </div>
+        <div className="absolute top-4 left-4 bg-black bg-opacity-50 rounded-lg px-3 py-1">
+          <span className={`text-xs font-medium ${isMicEnabled ? 'text-green-400' : 'text-red-400'}`}>
+            🎤 {isMicEnabled ? 'SENDING' : 'MUTED'}
+          </span>
         </div>
       </div>
 
@@ -215,8 +224,17 @@ const Index: React.FC<ILiveAudio> = ({ liveId, socket, auth, entity }) => {
         </div>
 
         <div className="flex space-x-2 align-center">
-          <button className="px-2 py-1 text-sm bg-green-600 rounded hover:bg-green-700">
-            <HiPlay />
+          <button
+            className={`px-2 py-1 text-sm rounded transition-colors ${isMicEnabled ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-600 hover:bg-gray-700'} ${!isMicOn ? 'opacity-50 cursor-not-allowed' : ''}`}
+            onClick={handleMic}
+            title={isMicEnabled ? 'Tắt gửi âm thanh' : 'Bật gửi âm thanh'}
+            disabled={!isMicOn}
+          >
+            {isMicEnabled ? (
+              <BsMicFill className="h-4 w-4" />
+            ) : (
+              <BsMicMuteFill className="h-4 w-4" />
+            )}
           </button>
           <button className="px-2 py-1 text-sm bg-green-600 rounded hover:bg-green-700">
             <Volume value={volume} onChange={(v) => setVolume(v)} />

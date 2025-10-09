@@ -172,7 +172,31 @@ export class RecorderService {
    */
   public async mixTracks(liveId: string): Promise<void> {
     this.logger.log(JSON.stringify({ liveId: liveId }, null, 2), 'RecorderService -> mixTracks');
-    const producers: IRecorders = await this.redisService.recorders(liveId);
+    const allProducers: IRecorders = await this.redisService.recorders(liveId);
+    const producers = allProducers.filter((f) => {
+      const filePath = path.resolve(`storage/${liveId}/${f.producerId}.mp3`);
+      const exists = fs.existsSync(filePath);
+      if (!exists) {
+        this.logger.warn(`File not found for producer ${f.producerId}: ${filePath}`);
+      }
+      return exists;
+    });
+
+    if (producers.length === 0) {
+      this.logger.warn(`No valid producer files found for liveId=${liveId}`);
+      return;
+    }
+    console.log('producers', producers);
+    const joinedTimestamps = producers.map((f) => Number(f.joinedAt)).filter((t) => !isNaN(t) && t > 0);
+
+    if (joinedTimestamps.length === 0) {
+      this.logger.warn(`No valid joinedAt found for liveId=${liveId}`);
+      return null;
+    }
+    let livedAt: number = await this.redisService.getLivedAt(liveId);
+    if (livedAt) {
+      livedAt = Math.min(...joinedTimestamps);
+    }
     this.logger.log(JSON.stringify(producers, null, 2), 'RecorderService -> mixTracks');
 
     // Tạo input arguments cho ffmpeg
@@ -182,7 +206,7 @@ export class RecorderService {
 
     const delays: string = producers
       .map((f, idx) => {
-        const delayMs = 0; // giây -> mili giây
+        const delayMs = Number(f.joinedAt) - livedAt;
         // const delayMs = f.delay * 1000; // giây -> mili giây
         return `[${idx}]adelay=${delayMs}|${delayMs}[a${idx}]`;
       })

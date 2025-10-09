@@ -8,6 +8,8 @@ export interface ILiveAudio {
   localStream?: MediaStream;
   auth?: IUser;
   entity?: ILiveEntity;
+  volume?: number;
+  isMicEnabled?: boolean;
 }
 
 export type UserGuard = 'ADMIN' | 'USER';
